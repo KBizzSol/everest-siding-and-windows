@@ -43,6 +43,7 @@ def fonts_css():
                 continue
             out.append("@font-face{font-family:'%s';font-style:%s;font-weight:%s;font-display:swap;src:url(/assets/fonts/%s) format('woff2')}"
                        % (names[m.group(1)], m.group(3), m.group(2), os.path.basename(f)))
+        out.append("@font-face{font-family:'Poppins Fallback';src:local('Arial');size-adjust:112.5%;ascent-override:93%;descent-override:31%;line-gap-override:9%}")
         FONT_CSS = "".join(out)
     return FONT_CSS
 
@@ -144,6 +145,13 @@ def optimize_page(fp):
     s = re.sub(r'(<div\b[^>]*?)\s*style="opacity:\s*0;?"([^>]*class="[^"]*\b(?:filtr-item|bfg_theme_1)\b)', r'\1\2', s)
     s = re.sub(r'(<div\b[^>]*class="[^"]*\b(?:filtr-item|bfg_theme_1)\b[^"]*"[^>]*?)\s*style="opacity:\s*0;?"', r'\1', s)
     s = re.sub(r'class="post-box ', 'class="post-box lazyimg ', s)
+    nfig = [0]
+    def lazy_fig(m):
+        nfig[0] += 1
+        if nfig[0] <= 2:
+            return m.group(0)
+        return '%s data-ev-bg="%s"' % (m.group(1), m.group(2))
+    s = re.sub(r'(<figure class="snip\d+[^"]*")\s*style="background-image:\s*url\(([^)]+)\)"', lazy_fig, s)
 
     # YouTube: thumbnail + play button; the player (about 1 MB) loads on tap
     def yt(m):

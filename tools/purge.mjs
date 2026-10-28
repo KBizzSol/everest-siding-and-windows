@@ -63,6 +63,7 @@ async function one(fp) {
     }
     cache.set(key, out);
   }
+  out = out.replace(/(['"]?)Poppins\1\s*,/g, (m, q) => `${q}Poppins${q},'Poppins Fallback',`);   // metric-matched fallback
   after += out.length;
   html = html.replace(m[0], '<style id="ev-css">' + out.replace(/<\/style/gi, '<\\/style') + '</style>');
   fs.writeFileSync(fp, html);

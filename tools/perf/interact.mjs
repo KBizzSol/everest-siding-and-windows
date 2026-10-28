@@ -37,7 +37,7 @@ try {
   ok('home: trackers waiting (not loaded before interaction)', await p.evaluate(() => document.querySelectorAll('script[type="text/ev-delay"]').length > 0));
   await p.tap('.mobile_menu_bar'); await sleep(500);
   ok('mobile menu opens', await p.evaluate(() => { const m = document.querySelector('.et_mobile_menu'); return !!m && getComputedStyle(m).display !== 'none' && m.offsetHeight > 100 && document.querySelector('.mobile_nav').classList.contains('opened'); }));
-  ok('mobile menu has all items', await p.evaluate(() => document.querySelectorAll('.et_mobile_menu > li').length === document.querySelectorAll('#menu-main-menu > li').length));
+  ok('mobile menu has all items', await p.evaluate(() => document.querySelectorAll('#mobile_menu1 > li').length === document.querySelectorAll('#menu-main-menu > li').length));
   await p.evaluate(() => document.querySelector('.et_mobile_menu .open-sub').click()); await sleep(200);
   ok('mobile submenu toggle', await p.evaluate(() => !!document.querySelector('.et_mobile_menu li.open')));
   await p.tap('.mobile_menu_bar'); await sleep(500);

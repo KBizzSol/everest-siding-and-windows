@@ -28,18 +28,23 @@
     $$('.et_pb_menu, .et_pb_fullwidth_menu').forEach(function (m, i) {
       var nav = $('.mobile_nav', m), src = $('.et-menu-nav > ul', m);
       if (!nav || !src || $('.et_mobile_menu', nav)) return;
-      var ul = d.createElement('ul');
-      ul.id = 'mobile_menu' + (i + 1);
-      ul.className = 'et_mobile_menu';
-      ul.innerHTML = src.innerHTML;
-      $$('li', ul).forEach(function (li) {
-        li.removeAttribute('id');
-        if (li.classList.contains('menu-item-has-children')) {
-          var t = d.createElement('span'); t.className = 'open-sub'; li.insertBefore(t, li.firstChild);
-        }
-      });
-      ul.style.display = 'none';
-      nav.appendChild(ul);
+      var ul = null;
+      function build() {
+        if (ul) return ul;
+        ul = d.createElement('ul');
+        ul.id = 'mobile_menu' + (i + 1);
+        ul.className = 'et_mobile_menu';
+        ul.innerHTML = src.innerHTML;
+        $$('li', ul).forEach(function (li) {
+          li.removeAttribute('id');
+          if (li.classList.contains('menu-item-has-children')) {
+            var t = d.createElement('span'); t.className = 'open-sub'; li.insertBefore(t, li.firstChild);
+          }
+        });
+        ul.style.display = 'none';
+        nav.appendChild(ul);
+        return ul;
+      }
       var bar = $('.mobile_menu_bar', nav);
       if (bar) { bar.setAttribute('role', 'button'); bar.setAttribute('aria-label', 'Menu'); bar.setAttribute('aria-expanded', 'false'); bar.tabIndex = 0; }
       on(nav, 'click', function (e) {
@@ -51,13 +56,14 @@
         }
         if (e.target.closest('.et_mobile_menu')) return;
         var open = nav.classList.contains('closed');
+        build();
         nav.classList.toggle('opened', open); nav.classList.toggle('closed', !open);
         if (bar) bar.setAttribute('aria-expanded', open ? 'true' : 'false');
         slide(ul, open);
       });
       on(nav, 'keydown', function (e) { if ((e.key === 'Enter' || e.key === ' ') && e.target === bar) { e.preventDefault(); bar.click(); } });
       on(d, 'click', function (e) {
-        if (nav.classList.contains('opened') && !e.target.closest('.mobile_nav')) {
+        if (ul && nav.classList.contains('opened') && !e.target.closest('.mobile_nav')) {
           nav.classList.remove('opened'); nav.classList.add('closed'); if (bar) bar.setAttribute('aria-expanded', 'false'); slide(ul, false);
         }
       });
@@ -156,18 +162,19 @@
       var idx = 0, n = 1, timer = null;
       c.classList.add('ev-carousel');
       wrap.style.display = 'flex'; wrap.style.transition = reduce ? 'none' : 'transform .4s ease'; wrap.style.willChange = 'transform';
+      var width = 0;
       function layout() {
         n = perView(c.getAttribute('data-breakpoints'));
         var cs = getComputedStyle(c);
         var inner = c.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
-        var width = (inner - gap * (n - 1)) / n;
+        width = (inner - gap * (n - 1)) / n;
         slides.forEach(function (s, i) { s.style.flex = '0 0 ' + width + 'px'; s.style.width = width + 'px'; s.style.marginRight = (i < slides.length - 1 ? gap : 0) + 'px'; s.classList.add('swiper-slide'); });
         go(Math.min(idx, Math.max(0, slides.length - n)));
       }
       function go(i) {
         var max = Math.max(0, slides.length - n);
         idx = i > max ? 0 : i < 0 ? max : i;
-        var x = slides[idx] ? slides[idx].offsetLeft - slides[0].offsetLeft : 0;
+        var x = idx * (width + gap);
         wrap.style.transform = 'translate3d(' + (-x) + 'px,0,0)';
         slides.forEach(function (s, j) { var vis = j >= idx && j < idx + n; s.setAttribute('aria-hidden', vis ? 'false' : 'true'); });
       }
@@ -185,7 +192,11 @@
       on(c, 'touchend', function (e) { if (sx === null) return; var dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 40) go(idx + (dx < 0 ? 1 : -1)); sx = null; play(); }, { passive: true });
       if (c.getAttribute('data-pauseonhover')) { on(c, 'mouseenter', stop); on(c, 'mouseleave', play); }
       var rt; on(w, 'resize', function () { clearTimeout(rt); rt = setTimeout(layout, 150); });
-      layout(); play();
+      // nothing to measure until the carousel is near the screen (CSS already lays out the first view)
+      if ('IntersectionObserver' in w) {
+        var io = new IntersectionObserver(function (en) { if (en[0].isIntersecting) { io.disconnect(); layout(); play(); } }, { rootMargin: '200px' });
+        io.observe(c);
+      } else { layout(); play(); }
     });
   }
 
@@ -498,6 +509,16 @@
     });
   }
 
+  /* ---------- lazy background photos (data-ev-bg) ---------- */
+  function lazyBg() {
+    var els = $$('[data-ev-bg]');
+    if (!els.length) return;
+    function show(el) { el.style.backgroundImage = 'url(' + el.getAttribute('data-ev-bg') + ')'; el.removeAttribute('data-ev-bg'); }
+    if (!('IntersectionObserver' in w)) { els.forEach(show); return; }
+    var io = new IntersectionObserver(function (en) { en.forEach(function (x) { if (x.isIntersecting) { io.unobserve(x.target); show(x.target); } }); }, { rootMargin: '400px' });
+    els.forEach(function (el) { io.observe(el); });
+  }
+
   /* ---------- tracking: run the original tags on first interaction ---------- */
   function delayed() {
     var done = false, evs = ['pointerdown', 'keydown', 'touchstart', 'scroll', 'mousemove', 'wheel'];
@@ -515,10 +536,11 @@
     evs.forEach(function (ev) { w.addEventListener(ev, run, { passive: true }); });
   }
 
+  function run(list) { list.forEach(function (f) { try { f(); } catch (e) { if (w.console) console.error('site.js', f.name, e); } }); }
   function init() {
-    [multiView, mobileMenus, popup, tabs, toggles, carousels, sliders, beforeAfter, lightbox, blogFilter, youtube, misc, translate, forms, delayed].forEach(function (f) {
-      try { f(); } catch (e) { if (w.console) console.error('site.js', f.name, e); }
-    });
+    run([multiView, mobileMenus, popup, tabs, toggles, forms, delayed, lazyBg, youtube, translate]);
+    var later = function () { run([carousels, sliders, beforeAfter, lightbox, blogFilter, misc]); };
+    if ('requestIdleCallback' in w) requestIdleCallback(later, { timeout: 1500 }); else setTimeout(later, 200);
   }
   if (d.readyState === 'loading') on(d, 'DOMContentLoaded', init); else init();
 })();
