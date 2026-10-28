@@ -1,3 +1,63 @@
+User-agent: Googlebot
+Allow: /
+Disallow: /wp-admin/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /wp-admin/
+
+User-agent: GPTBot
+Allow: /
+Disallow: /wp-admin/
+
+User-agent: OAI-SearchBot
+Allow: /
+Disallow: /wp-admin/
+
+User-agent: ChatGPT-User
+Allow: /
+Disallow: /wp-admin/
+
+User-agent: ClaudeBot
+Allow: /
+Disallow: /wp-admin/
+
+User-agent: Claude-SearchBot
+Allow: /
+Disallow: /wp-admin/
+
+User-agent: Claude-User
+Allow: /
+Disallow: /wp-admin/
+
+User-agent: PerplexityBot
+Allow: /
+Disallow: /wp-admin/
+
+User-agent: Perplexity-User
+Allow: /
+Disallow: /wp-admin/
+
+User-agent: Google-Extended
+Allow: /
+Disallow: /wp-admin/
+
+User-agent: Applebot
+Allow: /
+Disallow: /wp-admin/
+
+User-agent: Applebot-Extended
+Allow: /
+Disallow: /wp-admin/
+
+User-agent: Amazonbot
+Allow: /
+Disallow: /wp-admin/
+
+User-agent: DuckAssistBot
+Allow: /
+Disallow: /wp-admin/
+
 User-agent: *
 Allow: /
 Disallow: /wp-admin/

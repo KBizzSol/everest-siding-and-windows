@@ -28,7 +28,8 @@ See **AUDIT.md** for the malware/spam/link audit and what was fixed.
 - **Nothing visible.** Layout, URLs, menus, header, footer, images, Yoast meta and schema are unchanged.
 - Internal links point to local root-relative paths; canonical, og and JSON-LD URLs stay absolute.
 - WordPress-only head links (REST API, oEmbed, RSD, pingback) were removed because they would 404.
-- `sitemap_index.xml`, `page-sitemap.xml`, `post-sitemap.xml` and `robots.txt` are generated from the built pages.
+- `sitemap_index.xml`, `page-sitemap.xml`, `post-sitemap.xml` and `robots.txt` are generated from the built pages. `robots.txt` explicitly allows search and AI crawlers (GPTBot, ClaudeBot, PerplexityBot, Google-Extended and others).
+- `llms.txt` (business facts + every page, grouped) and `llms-full.txt` (full text of every page) for AI assistants. Business facts live in `tools/llms.py`.
 - WordPress system URLs (`/wp-admin/`, `/wp-login.php`, `/xmlrpc.php`, `/wp-json/`, feeds) redirect in `vercel.json`.
 
 ## Confirm before pointing the domain here

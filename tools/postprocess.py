@@ -6,9 +6,12 @@ Phase 1 = straight migration, nothing redesigned:
 - rewrites internal links to root-relative paths (canonical, og:url and JSON-LD stay absolute)
 - removes WordPress-only head links that would 404 on static hosting (REST API, oEmbed, RSD, pingback)
 - fixes found in the audit (phone links, utility pages noindexed, unreferenced uploads removed)
-- writes sitemap_index.xml + page/post sitemaps (Yoast file names) and robots.txt
+- writes sitemap_index.xml + page/post sitemaps (Yoast file names), robots.txt (AI crawlers allowed), llms.txt and llms-full.txt
 """
 import os, re, sys, shutil, html, glob, datetime
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import llms  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
@@ -243,8 +246,28 @@ def write_seo_files():
         index.append(f"<sitemap><loc>{SITE}/{name}</loc><lastmod>{max(mods.values())}</lastmod></sitemap>")
     open(os.path.join(OUT, "sitemap_index.xml"), "w").write(
         '<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + "".join(index) + "</sitemapindex>\n")
-    open(os.path.join(OUT, "robots.txt"), "w").write(
-        "User-agent: *\nAllow: /\nDisallow: /wp-admin/\n\nSitemap: " + SITE + "/sitemap_index.xml\n")
+    bots = ["Googlebot", "Bingbot", "GPTBot", "OAI-SearchBot", "ChatGPT-User", "ClaudeBot", "Claude-SearchBot",
+            "Claude-User", "PerplexityBot", "Perplexity-User", "Google-Extended", "Applebot", "Applebot-Extended",
+            "Amazonbot", "DuckAssistBot"]
+    robots = "".join(f"User-agent: {b}\nAllow: /\nDisallow: /wp-admin/\n\n" for b in bots)
+    robots += "User-agent: *\nAllow: /\nDisallow: /wp-admin/\n\nSitemap: " + SITE + "/sitemap_index.xml\n"
+    open(os.path.join(OUT, "robots.txt"), "w").write(robots)
+    # llms.txt + llms-full.txt (AI assistants / answer engines)
+    posts = set(groups["post-sitemap.xml"])
+    info = {}
+    for p in paths:
+        fp = os.path.join(OUT, p.strip("/"), "index.html") if p != "/" else os.path.join(OUT, "index.html")
+        h = open(fp, encoding="utf-8", errors="ignore").read()
+        clean = lambda x: re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", x))).strip()
+        t = re.search(r"<title>(.*?)</title>", h, re.S)
+        d = re.search(r'<meta name=["\']description["\'] content=["\']([^"\']*)', h)
+        h1 = re.search(r"<h1[^>]*>(.*?)</h1>", h, re.S)
+        info[p] = dict(title=clean(t.group(1)).replace(" - Everest Siding and Windows", "") if t else "",
+                       desc=clean(d.group(1)) if d else "", h1=clean(h1.group(1)) if h1 else "",
+                       text=llms.page_text(h), lastmod=lastmod(p), group=llms.group(p, p in posts))
+    open(os.path.join(OUT, "llms.txt"), "w").write(llms.llms_txt(paths, info))
+    open(os.path.join(OUT, "llms-full.txt"), "w").write(llms.llms_full(paths, info))
+    print("  llms groups:", {g: sum(1 for v in info.values() if v["group"] == g) for g in llms.GROUP_ORDER})
     print("  sitemap urls:", len(paths), {k: len(v) for k, v in groups.items()})
 
 
