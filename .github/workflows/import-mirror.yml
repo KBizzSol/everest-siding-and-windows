@@ -1,0 +1,33 @@
+name: Import mirror from URL
+# Used when the live host blocks GitHub runners: the mirror is made elsewhere
+# (e.g. a Vercel Sandbox), served as a .tgz, and imported here.
+on:
+  workflow_dispatch:
+  push:
+    paths: ['tools/.mirror-url']
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download and extract
+        run: |
+          URL=$(head -1 tools/.mirror-url)
+          curl -fsSL --retry 3 "$URL" -o /tmp/mirror.tgz
+          ls -la /tmp/mirror.tgz
+          rm -rf mirror
+          tar xzf /tmp/mirror.tgz
+          echo "files: $(find mirror -type f | wc -l)"
+          if grep -q sgcaptcha mirror/index.html; then echo "captcha page, aborting"; exit 1; fi
+      - name: Build site/
+        run: python3 tools/postprocess.py
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A mirror site tools
+          git commit -m "Import mirror of everestsidingandwindows.com and build site/" || echo "no changes"
+          git pull --rebase origin main || true
+          git push origin HEAD:main
