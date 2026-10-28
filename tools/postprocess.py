@@ -5,6 +5,7 @@ Phase 1 = straight migration, nothing redesigned:
 - keeps every original URL (folder/index.html, trailing slash)
 - rewrites internal links to root-relative paths (canonical, og:url and JSON-LD stay absolute)
 - removes WordPress-only head links that would 404 on static hosting (REST API, oEmbed, RSD, pingback)
+- fixes found in the audit (phone links, utility pages noindexed, unreferenced uploads removed)
 - writes sitemap_index.xml + page/post sitemaps (Yoast file names) and robots.txt
 """
 import os, re, sys, shutil, html, glob, datetime
@@ -46,6 +47,8 @@ def to_root(url, file_dir):
     if not u or u.lower().startswith(("#", "data:", "mailto:", "tel:", "javascript:", "sms:")):
         return None
     u = u.replace("\\/", "/")
+    if re.search(r"""['"`]\s*\+|\+\s*['"`]|\$\{|^'|'$""", u):
+        return None  # JavaScript string building (e.g. href="' + file + '"), not a URL
     m = re.match(r'^(?:https?:)?//' + DOM_RE + r'(/.*)?$', u, re.I)
     if m:
         path = m.group(1) or "/"
@@ -139,7 +142,7 @@ def restore_ld(s, store):
     return s
 
 
-def process_html(fp):
+def process_html(fp, page_path):
     s = open(fp, encoding="utf-8", errors="ignore").read()
     s, keep = protect_ld(s)
     s = clean_head(s)
@@ -149,7 +152,45 @@ def process_html(fp):
     s = re.sub(r'style=(["\'])(.*?)\1', lambda m: f'style={m.group(1)}{rewrite_css_urls(m.group(2), d)}{m.group(1)}', s, flags=re.S)
     s = rewrite_js_absolute(s)
     s = restore_ld(s, keep)
+    s = audit_fixes(s, page_path)
     open(fp, "w", encoding="utf-8").write(s)
+
+
+# ---------------------------------------------------------------- audit fixes
+# Utility pages reached only after a form or from a customer email: keep the URL, keep them out of search.
+NOINDEX = {"/thank-you-survey-form/", "/customer-satisfaction-survey/"}
+
+
+def audit_fixes(s, page_path):
+    # broken phone links in a few posts: href="Tel:+1-..." and href="http://Tel:+1-..."
+    s = re.sub(r'href=(["\'])(?:https?://)?tel:\+?1?-?\(?(\d{3})\)?[-. ]?(\d{3})[-. ]?(\d{4})\1',
+               r'href=\1tel:+1\2\3\4\1', s, flags=re.I)
+    if page_path in NOINDEX:
+        if re.search(r'<meta name=["\']robots["\']', s):
+            s = re.sub(r'(<meta name=["\']robots["\'] content=["\'])[^"\']*', r'\1noindex, follow', s, count=1)
+        else:
+            s = s.replace("</head>", '<meta name="robots" content="noindex, follow" />\n</head>', 1)
+    return s
+
+
+def prune_unreferenced():
+    """Delete files in uploads that no page, stylesheet or script references. Writes tools/junk-removed.txt."""
+    text = []
+    for f in glob.glob(os.path.join(OUT, "**", "*"), recursive=True):
+        if os.path.isfile(f) and re.search(r"\.(html|css|js|xml|txt|json)$", f):
+            text.append(open(f, encoding="utf-8", errors="ignore").read())
+    text = urllib_unquote("".join(text))
+    removed = []
+    for f in glob.glob(os.path.join(OUT, "wp-content", "uploads", "**", "*"), recursive=True):
+        if os.path.isfile(f) and os.path.basename(f) not in text:
+            removed.append(os.path.relpath(f, OUT)); os.remove(f)
+    open(os.path.join(HERE, "junk-removed.txt"), "w").write("\n".join(sorted(removed)) + ("\n" if removed else ""))
+    print("  unreferenced uploads removed:", len(removed))
+
+
+def urllib_unquote(s):
+    import urllib.parse
+    return urllib.parse.unquote(s)
 
 
 def process_css(fp):
@@ -211,10 +252,13 @@ def main():
     print("copy"); copy_tree()
     n = 0
     for fp in glob.glob(os.path.join(OUT, "**", "*.html"), recursive=True):
-        process_html(fp); n += 1
+        rel = os.path.relpath(fp, OUT).replace("\\", "/")
+        page_path = "/" + rel[: -len("index.html")] if rel.endswith("index.html") else "/" + rel
+        process_html(fp, page_path); n += 1
     for fp in glob.glob(os.path.join(OUT, "**", "*.css"), recursive=True):
         process_css(fp)
     print("  html files:", n)
+    print("prune"); prune_unreferenced()
     print("seo files"); write_seo_files()
 
 
