@@ -15,12 +15,14 @@ jobs:
       - name: Download fonts
         run: |
           mkdir -p /tmp/v && cd /tmp/v && npm init -y >/dev/null
-          npm i @fontsource/poppins@5 @fontsource/noto-sans@5
+          npm i @fontsource/poppins@5 @fontsource/noto-sans@5 @fontsource-variable/archivo@5
           mkdir -p $GITHUB_WORKSPACE/tools/vendor/fonts
           for w in 300 400 500 600 700 800 900; do cp node_modules/@fontsource/poppins/files/poppins-latin-$w-normal.woff2 $GITHUB_WORKSPACE/tools/vendor/fonts/; done
           cp node_modules/@fontsource/poppins/files/poppins-latin-400-italic.woff2 $GITHUB_WORKSPACE/tools/vendor/fonts/
           cp node_modules/@fontsource/poppins/files/poppins-latin-700-italic.woff2 $GITHUB_WORKSPACE/tools/vendor/fonts/
           cp node_modules/@fontsource/noto-sans/files/noto-sans-latin-400-normal.woff2 $GITHUB_WORKSPACE/tools/vendor/fonts/
+          ls node_modules/@fontsource-variable/archivo/files/ | head -20
+          cp node_modules/@fontsource-variable/archivo/files/archivo-latin-wdth-normal.woff2 $GITHUB_WORKSPACE/tools/vendor/fonts/archivo-latin-wdth-normal.woff2 || cp node_modules/@fontsource-variable/archivo/files/archivo-latin-wght-normal.woff2 $GITHUB_WORKSPACE/tools/vendor/fonts/archivo-latin-wght-normal.woff2
           ls -la $GITHUB_WORKSPACE/tools/vendor/fonts
       - name: Commit
         run: |
