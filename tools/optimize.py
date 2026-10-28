@@ -299,7 +299,7 @@ STATIC_CSS = (
     # form messages
     ".wpcf7 form .wpcf7-response-output:empty{display:none}"
     # blog filter plugin: no loader, items visible
-    ".blog_loader{display:none!important}.bfg_theme_1{opacity:1!important}"
+    ".blog_loader{display:none!important}.bfg_theme_1{opacity:1!important}.filtr-container{display:flex;flex-wrap:wrap}"
     "html{scroll-padding-top:120px}"
 )
 
