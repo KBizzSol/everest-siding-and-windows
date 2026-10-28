@@ -1,0 +1,9 @@
+{
+  "name": "everest-build-tools",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "lightningcss": "^1.27.0",
+    "purgecss": "^6.0.0"
+  }
+}
