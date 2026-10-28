@@ -111,10 +111,6 @@
 
   /* ---------- toggles & accordions ---------- */
   function toggles() {
-    // Divi starts accordions fully closed once its script runs, even if the HTML marks the first item open
-    $$('.et_pb_accordion .et_pb_toggle_open').forEach(function (t) {
-      t.classList.remove('et_pb_toggle_open'); t.classList.add('et_pb_toggle_close');
-    });
     $$('.et_pb_toggle').forEach(function (t) {
       var title = $('.et_pb_toggle_title', t), body = $('.et_pb_toggle_content', t);
       if (!title || !body) return;
@@ -418,6 +414,38 @@
     });
   }
 
+  /* ---------- portfolio filter (Blog Filter plugin) ---------- */
+  function blogFilter() {
+    $$('.blog_filter_main').forEach(function (root) {
+      var items = $$('.filtr-item', root);
+      if (!items.length) return;
+      var ctl = $$('.simplefilter li[data-multifilter]', root), search = $('[data-search]', root), cat = 'all';
+      function apply() {
+        var q = search ? search.value.trim().toLowerCase() : '';
+        items.forEach(function (it) {
+          var cats = (it.getAttribute('data-category') || '').split(/\s*,\s*/);
+          var okCat = cat === 'all' || cats.indexOf(cat) > -1;
+          var okText = !q || it.textContent.toLowerCase().indexOf(q) > -1;
+          it.style.display = okCat && okText ? '' : 'none';
+        });
+      }
+      ctl.forEach(function (li) {
+        on(li, 'click', function () {
+          cat = li.getAttribute('data-multifilter') || 'all';
+          ctl.forEach(function (x) { x.classList.toggle('active', x === li); x.classList.toggle('filter-active', x === li); });
+          apply();
+        });
+      });
+      if (search) on(search, 'input', apply);
+    });
+    // equal-height title boxes (the plugin's own helper)
+    ['.bf_title_box_1', '.bf_title_box_2'].forEach(function (sel) {
+      var els = $$(sel), max = 0;
+      els.forEach(function (e) { max = Math.max(max, e.offsetHeight); });
+      if (max) els.forEach(function (e) { e.style.height = max + 'px'; });
+    });
+  }
+
   /* ---------- tracking: run the original tags on first interaction ---------- */
   function delayed() {
     var done = false, evs = ['pointerdown', 'keydown', 'touchstart', 'scroll', 'mousemove', 'wheel'];
@@ -436,7 +464,7 @@
   }
 
   function init() {
-    [mobileMenus, popup, tabs, toggles, carousels, sliders, beforeAfter, lightbox, misc, translate, forms, delayed].forEach(function (f) {
+    [mobileMenus, popup, tabs, toggles, carousels, sliders, beforeAfter, lightbox, blogFilter, misc, translate, forms, delayed].forEach(function (f) {
       try { f(); } catch (e) { if (w.console) console.error('site.js', f.name, e); }
     });
   }

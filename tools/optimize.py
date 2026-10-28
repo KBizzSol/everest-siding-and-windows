@@ -25,6 +25,8 @@ TRACKER_PAT = re.compile(r"googletagmanager\.com/gtm\.js|gtag\(|clarity\.ms/tag|
 TRACKER_SRC = re.compile(r"googletagmanager\.com/gtag/js")
 # inline scripts that are dead (Universal Analytics stopped in 2024) or only feed removed WordPress code
 DROP_INLINE = re.compile(r"ga\('create'|analytics\.js")
+# page scripts that are plain JavaScript and still needed: Quick Quote calculator, blog archive dropdown
+KEEP_INLINE = re.compile(r"function do_math|block_core_archives_build_dropdown_script")
 
 FONT_CSS = None
 
@@ -79,6 +81,8 @@ def optimize_page(fp):
             return ""
         if DROP_INLINE.search(body):
             return ""
+        if KEEP_INLINE.search(body) and "jQuery" not in body:
+            return tag
         if TRACKER_PAT.search(body):
             trackers.append('<script type="text/ev-delay">%s</script>' % body)
             return ""
@@ -124,7 +128,20 @@ def optimize_page(fp):
     s = re.sub(r'<meta\b[^>]*name=["\']generator["\'][^>]*>', "", s, flags=re.I)
 
     # accordions start closed (what Divi's script did on load), done in HTML so nothing jumps
-    s = re.sub(r'class="([^"]*\bet_pb_accordion_item\b[^"]*)\bet_pb_toggle_open\b', r'class="\1et_pb_toggle_close', s)
+    def faqs_closed(src):
+        out, pos = [], 0
+        for m in re.finditer(r'class="[^"]*\bet_pb_accordion\b[^"]*\bkbs-faqs\b[^"]*"', src):
+            nxt = re.compile(r'class="([^"]*\bet_pb_accordion_item\b[^"]*)\bet_pb_toggle_open\b').search(src, m.end())
+            if not nxt or nxt.start() < pos:
+                continue
+            out.append(src[pos:nxt.start()]); out.append('class="' + nxt.group(1) + 'et_pb_toggle_close'); pos = nxt.end()
+        out.append(src[pos:])
+        return "".join(out)
+    s = faqs_closed(s)
+    # blog filter plugin (portfolio): items were hidden until Filterizr ran
+    s = re.sub(r'(<div\b[^>]*?)\s*style="opacity:\s*0;?"([^>]*class="[^"]*\b(?:filtr-item|bfg_theme_1)\b)', r'\1\2', s)
+    s = re.sub(r'(<div\b[^>]*class="[^"]*\b(?:filtr-item|bfg_theme_1)\b[^"]*"[^>]*?)\s*style="opacity:\s*0;?"', r'\1', s)
+    s = re.sub(r'class="post-box ', 'class="post-box lazyimg ', s)
 
     # ---- 3. carousel layout before JS (no layout shift): slides per view from data-breakpoints
     extra = [fonts_css(), STATIC_CSS]
@@ -279,6 +296,8 @@ STATIC_CSS = (
     ".et_pb_video_box iframe,.fluid-width-video-wrapper iframe{width:100%;aspect-ratio:16/9;height:auto}"
     # form messages
     ".wpcf7 form .wpcf7-response-output:empty{display:none}"
+    # blog filter plugin: no loader, items visible
+    ".blog_loader{display:none!important}.bfg_theme_1{opacity:1!important}"
     "html{scroll-padding-top:120px}"
 )
 
