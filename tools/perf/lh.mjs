@@ -4,7 +4,6 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
-import handler from 'serve-handler';
 import lighthouse from 'lighthouse';
 import * as chromeLauncher from 'chrome-launcher';
 import puppeteer from 'puppeteer';
@@ -13,10 +12,22 @@ const [siteDir, outDir, port, list, flag] = process.argv.slice(2);
 const pages = list.split(',');
 fs.mkdirSync(outDir, { recursive: true });
 
-const server = http.createServer((req, res) => handler(req, res, {
-  public: siteDir, cleanUrls: false, trailingSlash: true, directoryListing: false,
-  headers: [{ source: '**/*.@(webp|jpg|jpeg|png|gif|svg|woff|woff2|ttf|css|js)', headers: [{ key: 'Cache-Control', value: 'public, max-age=31536000' }] }],
-}));
+const TYPES = { html: 'text/html; charset=utf-8', css: 'text/css', js: 'text/javascript', json: 'application/json', xml: 'application/xml', txt: 'text/plain',
+  webp: 'image/webp', jpg: 'image/jpeg', jpeg: 'image/jpeg', png: 'image/png', gif: 'image/gif', svg: 'image/svg+xml', ico: 'image/x-icon',
+  woff: 'font/woff', woff2: 'font/woff2', ttf: 'font/ttf', eot: 'application/vnd.ms-fontobject', mp4: 'video/mp4', pdf: 'application/pdf' };
+const server = http.createServer((req, res) => {
+  let p = decodeURIComponent(req.url.split('?')[0]);
+  if (p.includes('..')) { res.statusCode = 400; return res.end(); }
+  let f = path.join(siteDir, p);
+  try { if (fs.statSync(f).isDirectory()) f = path.join(f, 'index.html'); } catch (e) {}
+  fs.readFile(f, (err, buf) => {
+    if (err) { res.statusCode = 404; return res.end('not found'); }
+    const ext = path.extname(f).slice(1).toLowerCase();
+    res.setHeader('Content-Type', TYPES[ext] || 'application/octet-stream');
+    if (ext !== 'html') res.setHeader('Cache-Control', 'public, max-age=31536000');
+    res.end(buf);
+  });
+});
 await new Promise(r => server.listen(Number(port), r));
 const base = `http://localhost:${port}`;
 
