@@ -7,7 +7,7 @@
   --ev-display:'Archivo','Archivo Fallback',Impact,sans-serif;--ev-r:10px}
 
 /* ---------- headlines: condensed signage type ---------- */
-#page-container h1,#page-container h2,#page-container h3,#page-container h4,#page-container .et_pb_slide_title,#page-container .kbs_headings h5{
+#page-container h1,#page-container h2,#page-container h3,#page-container h4,#page-container .et_pb_slide_title,#page-container .ev-faq summary{
   font-family:var(--ev-display)!important;font-stretch:84%;letter-spacing:-.005em;font-optical-sizing:auto}
 #page-container h1,#page-container h2,#page-container .et_pb_slide_title{font-weight:800!important;line-height:1.04!important}
 #page-container h3,#page-container h4{font-weight:700!important;line-height:1.12!important}
@@ -63,6 +63,13 @@
 .ev-promise__sub{font-size:clamp(17px,1.6vw,20px);line-height:1.55;max-width:58ch;margin:0 0 28px;color:#D7EEF0}
 .ev-promise__sub strong{color:#fff}
 .ev-promise__cta{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+#page-container .ev-promise p{padding-bottom:0}
+@media(min-width:900px){
+  .ev-promise__in{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);column-gap:56px;align-items:end;padding:84px 32px 80px}
+  .ev-promise__line{grid-row:1/span 3;max-width:16ch;margin:0}
+  .ev-promise__sub{margin-bottom:24px}
+  .ev-promise__fine{grid-column:2}
+}
 .ev-promise .ev-btn--call{box-shadow:0 3px 0 #001E26!important}
 .ev-promise__fine{margin:20px 0 0;font-size:14px;color:#9FC9CF}
 .ev-promise__fine a{color:#fff;text-underline-offset:3px}
@@ -88,7 +95,8 @@
 .ev-page ul,.ev-page ol{margin:0 0 18px 1.2em;padding:0}
 .ev-page li{margin:0 0 8px}
 .ev-page a{color:#1E6B33;text-underline-offset:3px}
-.ev-steps{counter-reset:s;list-style:none;margin:8px 0 22px!important;padding:0!important}
+#page-container .ev-page ol.ev-steps{counter-reset:s;list-style:none!important;margin:8px 0 22px!important;padding:0!important}
+#page-container .ev-page ol.ev-steps>li{list-style:none!important}
 .ev-steps li{counter-increment:s;position:relative;padding:0 0 18px 56px;margin:0!important;border-left:2px solid #CFE9EA;margin-left:18px!important}
 .ev-steps li:last-child{border-color:transparent}
 .ev-steps li:before{content:counter(s);position:absolute;left:-19px;top:-2px;width:36px;height:36px;border-radius:50%;background:var(--ev-ink);color:#fff;
