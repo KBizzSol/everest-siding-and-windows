@@ -303,6 +303,14 @@
 
   /* ---------- scroll to top, clickable blurbs, hash offset ---------- */
   function misc() {
+    // sticky header: Divi adds .et_pb_sticky while stuck (light teal background)
+    var sticky = $$('.et_pb_sticky_module');
+    if (sticky.length) {
+      var st = false, last = null;
+      var upd = function () { st = false; var on2 = w.scrollY > 2; if (on2 !== last) { last = on2; sticky.forEach(function (el) { el.classList.toggle('et_pb_sticky', on2); el.classList.toggle('et_pb_sticky--top', on2); }); } };
+      on(w, 'scroll', function () { if (!st) { st = true; requestAnimationFrame(upd); } }, { passive: true });
+      upd();
+    }
     var top = $('.et_pb_scroll_top');
     if (top) {
       var tick = false;
