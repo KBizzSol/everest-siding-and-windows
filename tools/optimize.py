@@ -212,6 +212,17 @@ def optimize_page(fp):
         return clean + "".join(parts) + "</div>"
     s = re.sub(r'(<div\b[^>]*data-et-multi-view="[^"]*"[^>]*>)((.*?))</div>(?=\s*</div>)', mv_content, s, flags=re.S)
 
+    # form fields without a visible label: name them for screen readers (placeholder text, or the select's question)
+    def label_field(m):
+        tag = m.group(0)
+        if "aria-label=" in tag or 'type="hidden"' in tag or 'type="submit"' in tag or 'type="checkbox"' in tag:
+            return tag
+        ph = re.search(r'placeholder="([^"]+)"', tag)
+        name = re.search(r'name="([^"]+)"', tag)
+        lab = ph.group(1).rstrip(" *") if ph else {"hear": "How did you hear about us?", "howcanwehelp": "How can we help?"}.get(name.group(1) if name else "", "")
+        return tag.replace("<" + m.group(1), '<%s aria-label="%s"' % (m.group(1), H.escape(lab, quote=True)), 1) if lab else tag
+    s = re.sub(r"<(input|select|textarea)\b[^>]*>", label_field, s)
+
     # ---- 3. carousel layout before JS (no layout shift): slides per view from data-breakpoints
     extra = [fonts_css(), STATIC_CSS, EV_CSS]
     n = [0]
