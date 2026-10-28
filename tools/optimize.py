@@ -123,6 +123,9 @@ def optimize_page(fp):
                lambda m: "" if re.search(r'rss\+xml|oembed|json|shortlink|api\.w\.org|xmlrpc|wp-json|/feed/|EditURI|pingback', m.group(0), re.I) else m.group(0), s, flags=re.I)
     s = re.sub(r'<meta\b[^>]*name=["\']generator["\'][^>]*>', "", s, flags=re.I)
 
+    # accordions start closed (what Divi's script did on load), done in HTML so nothing jumps
+    s = re.sub(r'class="([^"]*\bet_pb_accordion_item\b[^"]*)\bet_pb_toggle_open\b', r'class="\1et_pb_toggle_close', s)
+
     # ---- 3. carousel layout before JS (no layout shift): slides per view from data-breakpoints
     extra = [fonts_css(), STATIC_CSS]
     n = [0]
