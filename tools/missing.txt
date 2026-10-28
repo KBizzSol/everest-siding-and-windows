@@ -1,1 +1,5 @@
-
+wp-content/plugins/blog-filter-premium/fonts/glyphicons-halflings-regular.eot
+wp-content/plugins/blog-filter-premium/fonts/glyphicons-halflings-regular.svg
+wp-content/plugins/blog-filter-premium/fonts/glyphicons-halflings-regular.ttf
+wp-content/plugins/blog-filter-premium/fonts/glyphicons-halflings-regular.woff
+wp-content/plugins/blog-filter-premium/fonts/glyphicons-halflings-regular.woff2
