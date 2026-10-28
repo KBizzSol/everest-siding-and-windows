@@ -1,0 +1,222 @@
+#!/usr/bin/env python3
+"""Turn the raw WordPress mirror (mirror/) into the deployable static site (site/).
+
+Phase 1 = straight migration, nothing redesigned:
+- keeps every original URL (folder/index.html, trailing slash)
+- rewrites internal links to root-relative paths (canonical, og:url and JSON-LD stay absolute)
+- removes WordPress-only head links that would 404 on static hosting (REST API, oEmbed, RSD, pingback)
+- writes sitemap_index.xml + page/post sitemaps (Yoast file names) and robots.txt
+"""
+import os, re, sys, shutil, html, glob, datetime
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+REPO = os.path.dirname(HERE)
+SRC = os.path.join(REPO, "mirror")
+OUT = os.path.join(REPO, "site")
+DOM = "everestsidingandwindows.com"
+SITE = "https://" + DOM
+TODAY = datetime.date.today().isoformat()
+DOM_RE = r'(?:www\.)?' + re.escape(DOM)
+ASSET_EXT = r'\.(?:css|js|webp|png|jpe?g|gif|svg|woff2?|ttf|eot|otf|mp4|webm|ico|json|pdf)'
+
+# ---------------------------------------------------------------- copy + rename
+def copy_tree():
+    if os.path.exists(OUT):
+        shutil.rmtree(OUT)
+    shutil.copytree(SRC, OUT, ignore=shutil.ignore_patterns("_urls.txt"))
+    # strip wget query-suffixes from file names: x.css?ver=1.css -> x.css
+    for d, _, files in os.walk(OUT):
+        for f in files:
+            if "?" in f:
+                clean = f.split("?")[0]
+                src, dst = os.path.join(d, f), os.path.join(d, clean)
+                if not os.path.exists(dst):
+                    os.rename(src, dst)
+                else:
+                    os.remove(src)
+    # "/page.html" twins wget may create for "/page/" alongside "/page/index.html"
+    for fp in glob.glob(os.path.join(OUT, "**", "*.html"), recursive=True):
+        if not fp.endswith("index.html") and os.path.isdir(fp[:-5]) and os.path.exists(os.path.join(fp[:-5], "index.html")):
+            os.remove(fp)
+
+# ---------------------------------------------------------------- url rewriting
+def to_root(url, file_dir):
+    """Return a root-relative URL for an internal reference, else None."""
+    u = url.strip()
+    if not u or u.lower().startswith(("#", "data:", "mailto:", "tel:", "javascript:", "sms:")):
+        return None
+    u = u.replace("\\/", "/")
+    m = re.match(r'^(?:https?:)?//' + DOM_RE + r'(/.*)?$', u, re.I)
+    if m:
+        path = m.group(1) or "/"
+    elif re.match(r'^(?:[a-z]+:)?//', u, re.I):
+        return None  # other domain
+    elif u.startswith("/"):
+        path = u
+    else:
+        rel = os.path.relpath(file_dir, OUT)
+        rel = "" if rel == "." else rel
+        path = "/" + os.path.normpath(os.path.join(rel, u)).replace("\\", "/")
+        if u.endswith("/") and not path.endswith("/"):
+            path += "/"
+        if path == "/.":
+            path = "/"
+    frag = ""
+    if "#" in path:
+        path, frag = path.split("#", 1)
+        frag = "#" + frag
+    for sep in ("%3F", "%3f"):
+        if sep in path:
+            path = path.split(sep)[0]
+    query = ""
+    if "?" in path:
+        path, query = path.split("?", 1)
+        if re.search(ASSET_EXT + "$", path, re.I) or path.startswith(("/wp-content", "/wp-includes")):
+            query = ""
+        else:
+            query = "?" + query
+    if path.endswith("/index.html"):
+        path = path[: -len("index.html")]
+    path = re.sub(r"/{2,}", "/", path)
+    return path + query + frag
+
+
+def rewrite_attr_urls(s, file_dir):
+    def attr(m):
+        name, q, val = m.group(1), m.group(2), m.group(3)
+        if name.lower().endswith("srcset"):
+            parts = []
+            for p in val.split(","):
+                bits = p.strip().split()
+                if not bits:
+                    continue
+                r = to_root(bits[0], file_dir)
+                parts.append(" ".join([r or bits[0]] + bits[1:]))
+            return f'{name}={q}{", ".join(parts)}{q}'
+        r = to_root(html.unescape(val), file_dir)
+        return f'{name}={q}{html.escape(r, quote=False) if r else val}{q}'
+    return re.sub(r'\b(href|src|srcset|data-src|data-srcset|data-lazy-src|data-lazy-srcset|data-bg|data-link|poster|action)=(["\'])(.*?)\2',
+                  attr, s, flags=re.S)
+
+
+def rewrite_css_urls(s, file_dir):
+    def u(m):
+        q, val = m.group(1), m.group(2)
+        r = to_root(val, file_dir)
+        return f'url({q}{r}{q})' if r else m.group(0)
+    return re.sub(r'url\((["\']?)([^"\')]+)\1\)', u, s)
+
+
+def rewrite_js_absolute(s):
+    # JSON-escaped absolute asset URLs inside inline scripts: https:\/\/site.com\/wp-content\/...
+    return re.sub(r'https?:\\/\\/' + DOM_RE.replace('\\.', '\\.') + r'\\/(wp-content|wp-includes)', r'\\/\1', s)
+
+# ---------------------------------------------------------------- head
+def clean_head(s):
+    pats = [r'<link rel=["\']alternate["\'][^>]*(?:oembed|application/json)[^>]*>',
+            r'<link rel=["\']https://api\.w\.org/["\'][^>]*>',
+            r'<link rel=["\']EditURI["\'][^>]*>', r'<link rel=["\']pingback["\'][^>]*>']
+    for p in pats:
+        s = re.sub(p, "", s, flags=re.I)
+    return s
+
+
+def protect_ld(s):
+    store = []
+    def keep(m):
+        store.append(m.group(0))
+        return f"<!--LD{len(store)-1}-->"
+    # JSON-LD and canonical/og/hreflang tags keep their absolute URLs
+    s = re.sub(r'<script type=["\']application/ld\+json["\'][^>]*>.*?</script>'
+               r'|<link[^>]+rel=["\'](?:canonical|alternate|shortlink)["\'][^>]*>'
+               r'|<meta[^>]+(?:property|name)=["\'](?:og:|twitter:|msapplication)[^>]*>', keep, s, flags=re.S | re.I)
+    return s, store
+
+
+def restore_ld(s, store):
+    for i, block in enumerate(store):
+        s = s.replace(f"<!--LD{i}-->", block)
+    return s
+
+
+def process_html(fp):
+    s = open(fp, encoding="utf-8", errors="ignore").read()
+    s, keep = protect_ld(s)
+    s = clean_head(s)
+    d = os.path.dirname(fp)
+    s = rewrite_attr_urls(s, d)
+    s = re.sub(r'(<style[^>]*>)(.*?)(</style>)', lambda m: m.group(1) + rewrite_css_urls(m.group(2), d) + m.group(3), s, flags=re.S)
+    s = re.sub(r'style=(["\'])(.*?)\1', lambda m: f'style={m.group(1)}{rewrite_css_urls(m.group(2), d)}{m.group(1)}', s, flags=re.S)
+    s = rewrite_js_absolute(s)
+    s = restore_ld(s, keep)
+    open(fp, "w", encoding="utf-8").write(s)
+
+
+def process_css(fp):
+    s = open(fp, encoding="utf-8", errors="ignore").read()
+    s2 = rewrite_css_urls(s, os.path.dirname(fp))
+    if s2 != s:
+        open(fp, "w", encoding="utf-8").write(s2)
+
+# ---------------------------------------------------------------- sitemap + robots
+def page_paths():
+    out = []
+    for fp in glob.glob(os.path.join(OUT, "**", "index.html"), recursive=True):
+        rel = os.path.relpath(os.path.dirname(fp), OUT)
+        p = "/" if rel == "." else "/" + rel.replace("\\", "/") + "/"
+        if p.startswith(("/wp-", "/feed/", "/comments/")) or "/feed/" in p or re.search(r"/page/\d+/$", p):
+            continue
+        s = open(fp, encoding="utf-8", errors="ignore").read()
+        if re.search(r'<meta name=["\']robots["\'] content=["\'][^"\']*noindex', s):
+            continue
+        out.append(p)
+    return sorted(out, key=lambda p: (p != "/", p))
+
+
+def lastmod(p):
+    fp = os.path.join(OUT, p.strip("/"), "index.html") if p != "/" else os.path.join(OUT, "index.html")
+    s = open(fp, encoding="utf-8", errors="ignore").read()
+    ds = re.findall(r'article:modified_time" content="(\d{4}-\d\d-\d\d)', s) + re.findall(r'"dateModified":\s*"(\d{4}-\d\d-\d\d)', s)
+    ds = [d for d in ds if d <= TODAY]
+    return max(ds) if ds else TODAY
+
+
+def is_post(p):
+    fp = os.path.join(OUT, p.strip("/"), "index.html") if p != "/" else os.path.join(OUT, "index.html")
+    s = open(fp, encoding="utf-8", errors="ignore").read(200000)
+    return bool(re.search(r'og:type" content="article"', s) and re.search(r'\bsingle-post\b', s))
+
+
+def write_seo_files():
+    paths = page_paths()
+    groups = {"post-sitemap.xml": [p for p in paths if is_post(p)]}
+    groups["page-sitemap.xml"] = [p for p in paths if p not in groups["post-sitemap.xml"]]
+    index = []
+    for name, ps in groups.items():
+        if not ps:
+            continue
+        mods = {p: lastmod(p) for p in ps}
+        urls = "".join(f"<url><loc>{SITE}{p}</loc><lastmod>{mods[p]}</lastmod></url>" for p in ps)
+        open(os.path.join(OUT, name), "w").write(
+            f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>\n')
+        index.append(f"<sitemap><loc>{SITE}/{name}</loc><lastmod>{max(mods.values())}</lastmod></sitemap>")
+    open(os.path.join(OUT, "sitemap_index.xml"), "w").write(
+        '<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' + "".join(index) + "</sitemapindex>\n")
+    open(os.path.join(OUT, "robots.txt"), "w").write(
+        "User-agent: *\nAllow: /\nDisallow: /wp-admin/\n\nSitemap: " + SITE + "/sitemap_index.xml\n")
+    print("  sitemap urls:", len(paths), {k: len(v) for k, v in groups.items()})
+
+
+def main():
+    print("copy"); copy_tree()
+    n = 0
+    for fp in glob.glob(os.path.join(OUT, "**", "*.html"), recursive=True):
+        process_html(fp); n += 1
+    for fp in glob.glob(os.path.join(OUT, "**", "*.css"), recursive=True):
+        process_css(fp)
+    print("  html files:", n)
+    print("seo files"); write_seo_files()
+
+
+if __name__ == "__main__":
+    main()

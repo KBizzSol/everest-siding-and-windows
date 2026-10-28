@@ -1,0 +1,33 @@
+name: Mirror live site
+on:
+  workflow_dispatch:
+  push:
+    paths: ['tools/mirror.sh', 'tools/.mirror-trigger']
+permissions:
+  contents: write
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - name: Mirror
+        run: bash tools/mirror.sh
+      - name: Fetch missing assets (2 passes)
+        run: |
+          for i in 1 2; do
+            python3 tools/scan_missing.py mirror > tools/missing.txt
+            echo "pass $i missing: $(wc -l < tools/missing.txt)"
+            python3 tools/fetch_missing.py | tee tools/fetch_missing.log
+          done
+          python3 tools/scan_missing.py mirror > tools/missing.txt
+      - name: Build site/
+        run: python3 tools/postprocess.py
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mirror site tools/missing.txt tools/fetch_missing.log
+          git commit -m "Mirror live everestsidingandwindows.com and build site/" || echo "no changes"
+          git pull --rebase origin main || true
+          git push origin HEAD:main
