@@ -12,15 +12,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Build tools
+        run: |
+          npm i --prefix tools --no-audit --no-fund
+          python3 -m pip install --quiet --break-system-packages pillow || python3 -m pip install --quiet pillow
       - name: Download and extract
         run: |
           URL=$(head -1 tools/.mirror-url)
+          MODE=$(sed -n 2p tools/.mirror-url)
           curl -fsSL --retry 3 "$URL" -o /tmp/mirror.tgz
           ls -la /tmp/mirror.tgz
-          rm -rf mirror
+          # "merge" on line 2 adds/updates files; otherwise the mirror is replaced
+          if [ "$MODE" != "merge" ]; then rm -rf mirror; fi
           tar xzf /tmp/mirror.tgz
           echo "files: $(find mirror -type f | wc -l)"
-          if grep -q sgcaptcha mirror/index.html; then echo "captcha page, aborting"; exit 1; fi
+          if grep -rlq sgcaptcha --include=index.html mirror; then echo "captcha page found, aborting"; exit 1; fi
       - name: Build site/
         run: python3 tools/postprocess.py
       - name: Commit
@@ -29,5 +37,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add -A mirror site tools
           git commit -m "Import mirror of everestsidingandwindows.com and build site/" || echo "no changes"
-          git pull --rebase origin main || true
-          git push origin HEAD:main
+          git pull --rebase origin ${GITHUB_REF_NAME} || true
+          git push origin HEAD:${GITHUB_REF_NAME}

@@ -1,8 +1,8 @@
 name: Mirror live site
+# Manual only: SiteGround's captcha blocks GitHub runners, so this usually can't reach the site.
+# Use the Vercel Sandbox route in README.md instead.
 on:
   workflow_dispatch:
-  push:
-    paths: ['tools/mirror.sh', 'tools/.mirror-trigger']
 permissions:
   contents: write
 jobs:
@@ -11,8 +11,16 @@ jobs:
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Build tools
+        run: |
+          npm i --prefix tools --no-audit --no-fund
+          python3 -m pip install --quiet --break-system-packages pillow || python3 -m pip install --quiet pillow
       - name: Mirror
-        run: bash tools/mirror.sh
+        run: |
+          bash tools/mirror.sh
+          if grep -rlq sgcaptcha --include=index.html mirror; then echo 'captcha page: host blocked this runner, nothing committed'; exit 1; fi
       - name: Fetch missing assets (2 passes)
         run: |
           for i in 1 2; do
@@ -29,5 +37,5 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add mirror site tools/missing.txt tools/fetch_missing.log
           git commit -m "Mirror live everestsidingandwindows.com and build site/" || echo "no changes"
-          git pull --rebase origin main || true
-          git push origin HEAD:main
+          git pull --rebase origin ${GITHUB_REF_NAME} || true
+          git push origin HEAD:${GITHUB_REF_NAME}

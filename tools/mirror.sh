@@ -18,6 +18,8 @@ for idx in sitemap_index.xml wp-sitemap.xml sitemap.xml; do
   grep -oE '<loc>[^<]+</loc>' /tmp/si.xml | sed 's/<\/\?loc>//g' | grep -v '\.xml' >> /tmp/urls.txt || true
 done
 echo "$BASE/" >> /tmp/urls.txt
+# thank-you pages are noindex (not in sitemaps) but the forms redirect to them
+printf "%s\n" "$BASE/thank-you/" "$BASE/thank-you-lp/" "$BASE/thank-you-survey-form/" >> /tmp/urls.txt
 grep -v -iE '\.(jpg|jpeg|png|webp|gif|xml)$' /tmp/urls.txt | sed 's#^http://#https://#; s#//www\.#//#' | sort -u > /tmp/urls.sorted
 mv /tmp/urls.sorted /tmp/urls.txt
 echo "sitemap urls: $(wc -l < /tmp/urls.txt)"
