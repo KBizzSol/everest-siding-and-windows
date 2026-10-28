@@ -254,7 +254,10 @@ def optimize_page(fp):
     os.makedirs(BUILD, exist_ok=True)
     open(os.path.join(BUILD, css_id + ".css"), "w", encoding="utf-8").write("\n".join(parts) + "\n" + "".join(extra))
     head_bits = ""
-    head_bits += '<link rel="preload" href="/assets/fonts/poppins-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>'
+    for wgt in ("400", "500", "600", "700"):   # weights used above the fold: no text reflow when they arrive
+        head_bits += '<link rel="preload" href="/assets/fonts/poppins-latin-%s-normal.woff2" as="font" type="font/woff2" crossorigin>' % wgt
+    if ICON_DONE.get("wp-content/themes/Divi/core/admin/fonts/modules/all/modules"):
+        head_bits += '<link rel="preload" href="/assets/fonts/etmodules-ev.woff2" as="font" type="font/woff2" crossorigin>'
     head_bits += hero
     head_bits += "<!--EV-CSS:%s-->" % css_id
     head_bits += '<script defer src="/assets/site.js?v=%s"></script>' % JS_VER
@@ -465,6 +468,9 @@ def used_icon_codepoints():
                 cps.add(ord(ch))
     for f in glob.glob(os.path.join(OUT, "**", "*.html"), recursive=True):
         t = open(f, encoding="utf-8", errors="ignore").read()
+        for v in re.findall(r'content:\s*(?:"([^"]*)"|\'([^\']*)\')', t):
+            for ch in re.sub(r"\\([0-9a-fA-F]{1,6})\s?", lambda m: chr(int(m.group(1), 16)), v[0] or v[1]):
+                cps.add(ord(ch))
         for v in re.findall(r'data-icon(?:-[a-z]+)?=["\']([^"\']*)["\']', t):
             cps.update(ord(c) for c in H.unescape(v))
         for v in re.findall(r'class="[^"]*\b(?:et-pb-icon|et_pb_font_icon|fa|fas|far|fab)\b[^"]*"[^>]*>([^<]{1,8})<', t):
@@ -520,6 +526,7 @@ def main():
     print("optimize")
     compress_images()
     shutil.rmtree(BUILD, ignore_errors=True)
+    subset_icon_fonts()
     pages = glob.glob(os.path.join(OUT, "**", "*.html"), recursive=True)
     for fp in pages:
         if os.sep + "_ev" + os.sep in fp:
@@ -535,7 +542,6 @@ def main():
                     for m in re.finditer(r"(div\.et_pb_section\.et_pb_section_0\{background-image:)([^}]*?)url\(" + re.escape(big) + r"\)([^}]*)\}", css):
                         fh.write("@media only screen and (max-width:767px){%s%surl(%s)%s}}" % (m.group(1), m.group(2), small, m.group(3)))
     os.makedirs(os.path.join(OUT, "assets", "fonts"), exist_ok=True)
-    subset_icon_fonts()
     swap_icon_fonts_in_css()
     open(os.path.join(OUT, "assets", "site.js"), "w", encoding="utf-8").write(SITE_JS)
     for f in glob.glob(os.path.join(HERE, "vendor", "fonts", "*.woff2")):

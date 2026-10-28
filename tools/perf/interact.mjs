@@ -100,7 +100,7 @@ try {
   p = await open('/lp-smartside-in-houston-tx/');
   ok('lp: no JS errors', p._errs.length === 0, p._errs.join(' | ').slice(0, 200));
   ok('gallery slider has arrows + dots', await p.evaluate(() => !!document.querySelector('.et_pb_gallery_fullwidth .et-pb-slider-arrows') && !!document.querySelector('.et_pb_gallery_fullwidth .et-pb-controllers')));
-  ok('phone image swapped (multi-view)', await p.evaluate(() => document.querySelector('.et_pb_image_11 img').getAttribute('src').includes('LP-SmartSide-Colors.jpg')));
+  ok('phone image swapped (multi-view)', await p.evaluate(async () => { const i = document.querySelector('.et_pb_image_11 img'); i.loading = 'eager'; i.scrollIntoView(); await new Promise(r => setTimeout(r, 800)); return (i.currentSrc || '').includes('LP-SmartSide-Colors'); }));
   await p.close();
   p = await open('/about/');
   ok('about: phone History text shown', await p.evaluate(() => [...document.querySelectorAll('.et_pb_text_inner')].some(e => /Everest was formed/.test(e.textContent) && e.offsetHeight > 200)));
