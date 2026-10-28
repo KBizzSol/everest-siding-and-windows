@@ -224,7 +224,7 @@
     $$('.dnxte_bf_img').forEach(function (b) {
       var box = b.parentNode, a = $('.dnxte_af_img', box);
       if (!a || box.classList.contains('ev-ba')) return;
-      box.classList.add('ev-ba', 'twentytwenty-container');
+      box.classList.add('ev-ba');
       var pos = Number(box.getAttribute('data-offset') || 0.5) * 100;
       var bl = box.getAttribute('data-before-label') || 'Before', al = box.getAttribute('data-after-label') || 'After';
       var h = d.createElement('div'); h.className = 'ev-ba-handle twentytwenty-handle'; h.innerHTML = '<span class="twentytwenty-left-arrow"></span><span class="twentytwenty-right-arrow"></span>';

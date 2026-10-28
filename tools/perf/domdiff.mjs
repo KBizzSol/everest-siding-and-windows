@@ -29,8 +29,8 @@ async function snap(port) {
       const key = [...el.classList].filter(c => /_\d+(_tb_(header|footer|body))?$/.test(c)).join('.') || null;
       if (!key) return;
       const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
-      res[key] = { h: Math.round(r.height), y: Math.round(r.top + scrollY), vis: cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0',
-        bg: cs.backgroundImage.slice(0, 60), txt: (el.innerText || '').slice(0, 40).replace(/\s+/g, ' ') };
+      res[key] = { w: Math.round(r.width), ff: cs.fontFamily.slice(0, 24) + ' ' + cs.fontWeight + ' ' + cs.fontSize + '/' + cs.lineHeight, h: Math.round(r.height), y: Math.round(r.top + scrollY), vis: cs.display !== 'none' && cs.visibility !== 'hidden' && cs.opacity !== '0',
+        bg: cs.backgroundImage.replace(/https?:\/\/localhost:\d+/g, '').slice(0, 60), txt: (el.innerText || '').slice(0, 40).replace(/\s+/g, ' ') };
     });
     return res;
   });
@@ -43,11 +43,11 @@ for (const k of Object.keys(A)) {
   const a = A[k], b = B[k];
   if (!b) { rows.push(`MISSING in B: ${k} h=${a.h} "${a.txt}"`); continue; }
   if (Math.abs(a.h - b.h) > 6 || a.vis !== b.vis || (a.bg !== b.bg && !(a.bg.includes('ev768') || b.bg.includes('ev768'))))
-    rows.push(`${k}: h ${a.h}->${b.h} vis ${a.vis}->${b.vis}${a.bg !== b.bg ? ' bg ' + a.bg + ' -> ' + b.bg : ''} "${a.txt}"`);
+    rows.push(`${k}: h ${a.h}->${b.h} w ${a.w}->${b.w}${a.ff !== b.ff ? ' font [' + a.ff + '] -> [' + b.ff + ']' : ''} vis ${a.vis}->${b.vis}${a.bg !== b.bg ? ' bg ' + a.bg + ' -> ' + b.bg : ''} "${a.txt}"`);
 }
 console.log(`${page}: ${rows.length} differences`);
 // print only the outermost differing items first (sections/rows), then modules
 rows.sort((x, y) => (x.includes('section') ? 0 : x.includes('row') ? 1 : 2) - (y.includes('section') ? 0 : y.includes('row') ? 1 : 2));
-console.log(rows.slice(0, 40).join('\n'));
+console.log(rows.filter(r => !/section_|row_|column_/.test(r.split(':')[0])).slice(0, 14).join('\n'));
 await browser.close();
 process.exit(0);
