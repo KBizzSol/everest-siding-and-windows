@@ -111,6 +111,10 @@
 
   /* ---------- toggles & accordions ---------- */
   function toggles() {
+    // Divi starts accordions fully closed once its script runs, even if the HTML marks the first item open
+    $$('.et_pb_accordion .et_pb_toggle_open').forEach(function (t) {
+      t.classList.remove('et_pb_toggle_open'); t.classList.add('et_pb_toggle_close');
+    });
     $$('.et_pb_toggle').forEach(function (t) {
       var title = $('.et_pb_toggle_title', t), body = $('.et_pb_toggle_content', t);
       if (!title || !body) return;
@@ -158,7 +162,9 @@
       wrap.style.display = 'flex'; wrap.style.transition = reduce ? 'none' : 'transform .4s ease'; wrap.style.willChange = 'transform';
       function layout() {
         n = perView(c.getAttribute('data-breakpoints'));
-        var width = (c.clientWidth - gap * (n - 1)) / n;
+        var cs = getComputedStyle(c);
+        var inner = c.clientWidth - parseFloat(cs.paddingLeft || 0) - parseFloat(cs.paddingRight || 0);
+        var width = (inner - gap * (n - 1)) / n;
         slides.forEach(function (s, i) { s.style.flex = '0 0 ' + width + 'px'; s.style.width = width + 'px'; s.style.marginRight = (i < slides.length - 1 ? gap : 0) + 'px'; s.classList.add('swiper-slide'); });
         go(Math.min(idx, Math.max(0, slides.length - n)));
       }
