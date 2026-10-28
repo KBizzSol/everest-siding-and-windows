@@ -1,0 +1,32 @@
+name: Fetch vendor files
+on:
+  workflow_dispatch:
+  push:
+    paths: ['tools/.vendor-trigger']
+permissions:
+  contents: write
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Download fonts
+        run: |
+          mkdir -p /tmp/v && cd /tmp/v && npm init -y >/dev/null
+          npm i @fontsource/poppins@5 @fontsource/noto-sans@5
+          mkdir -p $GITHUB_WORKSPACE/tools/vendor/fonts
+          for w in 300 400 500 600 700 800 900; do cp node_modules/@fontsource/poppins/files/poppins-latin-$w-normal.woff2 $GITHUB_WORKSPACE/tools/vendor/fonts/; done
+          cp node_modules/@fontsource/poppins/files/poppins-latin-400-italic.woff2 $GITHUB_WORKSPACE/tools/vendor/fonts/
+          cp node_modules/@fontsource/poppins/files/poppins-latin-700-italic.woff2 $GITHUB_WORKSPACE/tools/vendor/fonts/
+          cp node_modules/@fontsource/noto-sans/files/noto-sans-latin-400-normal.woff2 $GITHUB_WORKSPACE/tools/vendor/fonts/
+          ls -la $GITHUB_WORKSPACE/tools/vendor/fonts
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/vendor
+          git commit -m "Vendor Poppins and Noto Sans fonts" || echo "no changes"
+          git pull --rebase origin ${GITHUB_REF_NAME} || true
+          git push origin HEAD:${GITHUB_REF_NAME}
