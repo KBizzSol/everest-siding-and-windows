@@ -11,7 +11,9 @@ An exact static copy of the current everestsidingandwindows.com (WordPress), wit
 | `.github/workflows/` | `mirror.yml` re-mirrors the live site and rebuilds `site/`; `build.yml` rebuilds `site/` only. |
 
 ## Re-mirror the live site
-GitHub → Actions → **Mirror live site** → Run workflow (or change `tools/.mirror-trigger` and push). It mirrors, fetches any missing assets, rebuilds `site/` and commits. Vercel redeploys automatically.
+SiteGround's anti-bot captcha blocks GitHub's runners, so the mirror is made in a **Vercel Sandbox** (Vercel's network gets through): clone this repo there, run `tools/mirror.sh` plus `tools/scan_missing.py` / `tools/fetch_missing.py`, tar `mirror/`, serve it, put the URL in `tools/.mirror-url` and push. The **Import mirror from URL** workflow downloads it, rebuilds `site/` and commits; Vercel redeploys automatically.
+
+(`mirror.yml` still works for hosts that don't block GitHub.)
 
 ## Rebuild after editing
 ```
@@ -19,6 +21,8 @@ python3 tools/postprocess.py
 git add -A && git commit -m "Update site" && git push   # Vercel redeploys automatically
 ```
 To change an original page, edit the file in `mirror/`, then rebuild.
+
+See **AUDIT.md** for the malware/spam/link audit and what was fixed.
 
 ## Phase 1 (migration) — what changed vs. WordPress
 - **Nothing visible.** Layout, URLs, menus, header, footer, images, Yoast meta and schema are unchanged.
