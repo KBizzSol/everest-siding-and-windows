@@ -32,7 +32,8 @@ function walk(d, acc = []) {
 
 const pages = walk(OUT);
 let before = 0, after = 0, done = 0;
-const cache = new Map();   // identical (css, html-class-set) pairs are common across posts
+const cache = new Map();
+const failed = [];   // identical (css, html-class-set) pairs are common across posts
 
 async function one(fp) {
   let html = fs.readFileSync(fp, 'utf8');
@@ -45,17 +46,20 @@ async function one(fp) {
   const key = css.length + ':' + css.slice(0, 200) + ':' + classes.length + ':' + classes;
   let out = cache.get(key);
   if (!out) {
-    const res = await new PurgeCSS().purge({
-      content: [{ raw: html, extension: 'html' }, { raw: siteJs, extension: 'js' }],
-      css: [{ raw: css }],
-      safelist,
-      fontFace: false, keyframes: false, variables: false,
-    });
-    const purged = res.map(r => r.css).join('\n');
+    const clean = (code, minify) => transform({ filename: 'p.css', code: Buffer.from(code), minify, errorRecovery: true }).code.toString();
+    let normalized;
+    try { normalized = clean(css, false); } catch (e) { normalized = css; }   // repairs WordPress CSS syntax slips
     try {
-      out = transform({ filename: 'p.css', code: Buffer.from(purged), minify: true, errorRecovery: true }).code.toString();
+      const res = await new PurgeCSS().purge({
+        content: [{ raw: html, extension: 'html' }, { raw: siteJs, extension: 'js' }],
+        css: [{ raw: normalized }],
+        safelist,
+        fontFace: false, keyframes: false, variables: false,
+      });
+      out = clean(res.map(r => r.css).join('\n'), true);
     } catch (e) {
-      out = purged;
+      failed.push(path.relative(OUT, fp) + ': ' + String(e.message || e).split('\n')[0]);
+      out = clean(normalized, true);                                          // still works, just bigger
     }
     cache.set(key, out);
   }
@@ -68,4 +72,5 @@ async function one(fp) {
 const queue = pages.slice();
 await Promise.all(Array.from({ length: 4 }, async () => { while (queue.length) await one(queue.shift()); }));
 fs.rmSync(BUILD, { recursive: true, force: true });
+if (failed.length) console.log('  purge fell back to full CSS on:', failed.slice(0, 10));
 console.log(`  purge: ${done} pages, avg css ${(before / Math.max(done, 1) / 1024).toFixed(0)} KB -> ${(after / Math.max(done, 1) / 1024).toFixed(0)} KB`);
