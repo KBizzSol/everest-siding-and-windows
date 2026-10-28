@@ -65,6 +65,7 @@ def optimize_page(fp):
     if "<head" not in s:
         return
     head_end = s.find("</head>")
+    had_faq_script = 'kbs-faqs .et_pb_toggle:first-child' in s
 
     # ---- 1. scripts
     trackers = []
@@ -137,7 +138,8 @@ def optimize_page(fp):
             out.append(src[pos:nxt.start()]); out.append('class="' + nxt.group(1) + 'et_pb_toggle_close'); pos = nxt.end()
         out.append(src[pos:])
         return "".join(out)
-    s = faqs_closed(s)
+    if had_faq_script:      # only pages that had that script
+        s = faqs_closed(s)
     # blog filter plugin (portfolio): items were hidden until Filterizr ran
     s = re.sub(r'(<div\b[^>]*?)\s*style="opacity:\s*0;?"([^>]*class="[^"]*\b(?:filtr-item|bfg_theme_1)\b)', r'\1\2', s)
     s = re.sub(r'(<div\b[^>]*class="[^"]*\b(?:filtr-item|bfg_theme_1)\b[^"]*"[^>]*?)\s*style="opacity:\s*0;?"', r'\1', s)
