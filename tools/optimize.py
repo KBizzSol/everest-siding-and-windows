@@ -145,6 +145,64 @@ def optimize_page(fp):
     s = re.sub(r'(<div\b[^>]*class="[^"]*\b(?:filtr-item|bfg_theme_1)\b[^"]*"[^>]*?)\s*style="opacity:\s*0;?"', r'\1', s)
     s = re.sub(r'class="post-box ', 'class="post-box lazyimg ', s)
 
+    # YouTube: thumbnail + play button; the player (about 1 MB) loads on tap
+    def yt(m):
+        tag = m.group(0)
+        src = H.unescape(re.search(r'src=["\']([^"\']+)', tag).group(1))
+        vid = re.search(r"youtube(?:-nocookie)?\.com/embed/([\w-]{6,})", src)
+        if not vid:
+            return tag
+        title = re.search(r'title=["\']([^"\']*)', tag)
+        title = title.group(1) if title else "YouTube video"
+        w_ = re.search(r'width=["\'](\d+)', tag); h_ = re.search(r'height=["\'](\d+)', tag)
+        ratio = "%s/%s" % (w_.group(1), h_.group(1)) if w_ and h_ else "16/9"
+        play = "https://www.youtube.com/embed/%s?autoplay=1&rel=0" % vid.group(1)
+        return ('<div class="ev-yt" data-src="%s" data-title="%s" style="aspect-ratio:%s">'
+                '<img loading="lazy" decoding="async" src="https://i.ytimg.com/vi/%s/hqdefault.jpg" alt="%s">'
+                '<button type="button" class="ev-yt-play" aria-label="Play video: %s"></button></div>'
+                % (H.escape(play, quote=True), title, ratio, vid.group(1), title, title))
+    s = re.sub(r"<iframe\b[^>]*youtube(?:-nocookie)?\.com/embed/[^>]*>\s*</iframe>", yt, s, flags=re.I)
+
+    # Divi "multi view" (different image/text per device), resolved in HTML: no JS, no layout shift
+    def mv_img(m):
+        tag = m.group(0)
+        raw = re.search(r'data-et-multi-view="([^"]+)"', tag)
+        try:
+            data = json.loads(H.unescape(raw.group(1)))
+            attrs = data["schema"]["attrs"]
+        except Exception:
+            return tag
+        img = re.sub(r'\s*data-et-multi-view(?:-load-[a-z]+-hidden)?="[^"]*"', "", tag)
+        srcs = ""
+        for dev, mq in (("phone", "(max-width:767px)"), ("tablet", "(max-width:980px)")):
+            a = attrs.get(dev)
+            if a and (a.get("srcset") or a.get("src")):
+                srcs += '<source media="%s" srcset="%s"%s>' % (mq, H.escape(a.get("srcset") or a["src"], quote=True),
+                                                            (' sizes="%s"' % H.escape(a["sizes"], quote=True)) if a.get("sizes") else "")
+        return "<picture>%s%s</picture>" % (srcs, img) if srcs else img
+    s = re.sub(r"<img\b[^>]*data-et-multi-view=[^>]*>", mv_img, s)
+
+    def mv_content(m):
+        open_tag, inner = m.group(1), m.group(3)
+        raw = re.search(r'data-et-multi-view="([^"]+)"', open_tag)
+        try:
+            content = json.loads(H.unescape(raw.group(1)))["schema"]["content"]
+        except Exception:
+            return m.group(0)
+        clean = re.sub(r'\s*data-et-multi-view(?:-load-[a-z]+-hidden)?="[^"]*"', "", open_tag)
+        d_ = content.get("desktop", inner); t_ = content.get("tablet", d_); p_ = content.get("phone", t_)
+        if d_ == t_ == p_:
+            return clean + d_ + "</div>"
+        parts = []
+        if p_ != t_:
+            parts.append('<div class="ev-mv ev-mv-p">%s</div>' % p_)
+            parts.append('<div class="ev-mv ev-mv-t">%s</div>' % t_ if t_ != d_ else "")
+        elif t_ != d_:
+            parts.append('<div class="ev-mv ev-mv-pt">%s</div>' % t_)
+        parts.append('<div class="ev-mv %s">%s</div>' % ("ev-mv-d" if t_ != d_ else "ev-mv-td", d_))
+        return clean + "".join(parts) + "</div>"
+    s = re.sub(r'(<div\b[^>]*data-et-multi-view="[^"]*"[^>]*>)((.*?))</div>(?=\s*</div>)', mv_content, s, flags=re.S)
+
     # ---- 3. carousel layout before JS (no layout shift): slides per view from data-breakpoints
     extra = [fonts_css(), STATIC_CSS]
     n = [0]
@@ -306,6 +364,14 @@ STATIC_CSS = (
     # blog filter plugin: no loader, items visible
     ".blog_loader{display:none!important}.bfg_theme_1{opacity:1!important}.filtr-container{display:flex;flex-wrap:wrap}"
     "html{scroll-padding-top:120px}"
+    # YouTube preview
+    ".ev-yt{position:relative;width:100%;background:#000;cursor:pointer;overflow:hidden}.ev-yt img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}"
+    ".ev-yt-play{position:absolute;left:50%;top:50%;width:68px;height:48px;margin:-24px 0 0 -34px;border:0;border-radius:12px;background:#f00;cursor:pointer}"
+    ".ev-yt-play:after{content:'';position:absolute;left:27px;top:14px;border-style:solid;border-width:10px 0 10px 17px;border-color:transparent transparent transparent #fff}"
+    ".ev-yt iframe{position:absolute;inset:0;width:100%;height:100%;border:0}"
+    # device-specific content (Divi multi view)
+    ".ev-mv-p,.ev-mv-t,.ev-mv-pt{display:none}@media(max-width:767px){.ev-mv-p,.ev-mv-pt{display:block}.ev-mv-t,.ev-mv-td,.ev-mv-d{display:none}}"
+    "@media(min-width:768px) and (max-width:980px){.ev-mv-t,.ev-mv-pt,.ev-mv-td{display:block}.ev-mv-p,.ev-mv-d{display:none}}"
     "#et-main-area .et_builder_inner_content>.et_pb_section:not(:first-child):not(.et_pb_section_0){content-visibility:auto;contain-intrinsic-size:auto 900px}"
     ".et-l--footer .et_builder_inner_content>.et_pb_section{content-visibility:visible}"
 )

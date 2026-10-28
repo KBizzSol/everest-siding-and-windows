@@ -336,6 +336,19 @@
     $$('input.form_date').forEach(function (i) { i.type = 'date'; });
   }
 
+  /* ---------- YouTube previews: load the player on tap ---------- */
+  function youtube() {
+    on(d, 'click', function (e) {
+      var box = e.target.closest('.ev-yt');
+      if (!box || $('iframe', box)) return;
+      var f = d.createElement('iframe');
+      f.src = box.getAttribute('data-src'); f.title = box.getAttribute('data-title') || 'YouTube video';
+      f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+      f.allowFullscreen = true;
+      box.appendChild(f);
+    });
+  }
+
   /* ---------- EN / ES (Google Translate, loaded only when asked) ---------- */
   function translate() {
     var pending = null;
@@ -503,7 +516,7 @@
   }
 
   function init() {
-    [multiView, mobileMenus, popup, tabs, toggles, carousels, sliders, beforeAfter, lightbox, blogFilter, misc, translate, forms, delayed].forEach(function (f) {
+    [multiView, mobileMenus, popup, tabs, toggles, carousels, sliders, beforeAfter, lightbox, blogFilter, youtube, misc, translate, forms, delayed].forEach(function (f) {
       try { f(); } catch (e) { if (w.console) console.error('site.js', f.name, e); }
     });
   }
