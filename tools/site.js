@@ -189,36 +189,67 @@
     });
   }
 
-  /* ---------- Divi slider (rotating hero titles etc.) ---------- */
+  /* ---------- Divi sliders + fullwidth gallery sliders (arrows, dots, autoplay) ---------- */
   function sliders() {
     $$('.et_pb_slider').forEach(function (s) {
-      var slides = $$('.et_pb_slides > .et_pb_slide', s);
+      var gallery = s.classList.contains('et_pb_gallery_fullwidth');
+      var slides = gallery ? $$('.et_pb_gallery_items > .et_pb_gallery_item', s) : $$('.et_pb_slides > .et_pb_slide', s);
       if (slides.length < 2) return;
       var m = s.className.match(/et_slider_speed_(\d+)/), speed = m ? Number(m[1]) : 7000;
       var i = Math.max(0, slides.findIndex(function (x) { return x.classList.contains('et-pb-active-slide'); }));
-      function show(k) {
-        slides[i].classList.remove('et-pb-active-slide');
-        i = (k + slides.length) % slides.length;
-        slides[i].classList.add('et-pb-active-slide');
-        var ctl = $$('.et-pb-controllers a', s); ctl.forEach(function (a, j) { a.classList.toggle('et-pb-active-control', j === i); });
+      if (!s.classList.contains('et_pb_slider_no_arrows') && !$('.et-pb-slider-arrows', s)) {
+        var ar = d.createElement('div'); ar.className = 'et-pb-slider-arrows';
+        ar.innerHTML = '<a class="et-pb-arrow-prev" href="#" style="color:inherit"><span>Previous</span></a><a class="et-pb-arrow-next" href="#" style="color:inherit"><span>Next</span></a>';
+        s.appendChild(ar);
       }
-      $$('.et-pb-controllers a', s).forEach(function (a, j) { on(a, 'click', function (e) { e.preventDefault(); show(j); }); });
+      if (!s.classList.contains('et_pb_slider_no_pagination') && !$('.et-pb-controllers', s)) {
+        var ct = d.createElement('div'); ct.className = 'et-pb-controllers';
+        ct.innerHTML = slides.map(function (x, j) { return '<a href="#">' + (j + 1) + '</a>'; }).join('');
+        s.appendChild(ct);
+      }
+      function paint() {
+        slides.forEach(function (x, j) {
+          x.classList.toggle('et-pb-active-slide', j === i);
+          if (gallery) x.style.display = j === i ? 'block' : 'none';
+        });
+        $$('.et-pb-controllers a', s).forEach(function (a, j) { a.classList.toggle('et-pb-active-control', j === i); });
+      }
+      function show(k) { i = (k + slides.length) % slides.length; paint(); }
+      $$('.et-pb-controllers a', s).forEach(function (a, j) { on(a, 'click', function (e) { e.preventDefault(); show(j); restart(); }); });
       var pv = $('.et-pb-arrow-prev', s), nx = $('.et-pb-arrow-next', s);
-      if (pv) on(pv, 'click', function (e) { e.preventDefault(); show(i - 1); });
-      if (nx) on(nx, 'click', function (e) { e.preventDefault(); show(i + 1); });
-      if (s.classList.contains('et_slider_auto') && !reduce) setInterval(function () { if (!d.hidden) show(i + 1); }, speed);
+      if (pv) on(pv, 'click', function (e) { e.preventDefault(); show(i - 1); restart(); });
+      if (nx) on(nx, 'click', function (e) { e.preventDefault(); show(i + 1); restart(); });
+      var timer = null;
+      function restart() {
+        if (timer) clearInterval(timer);
+        if (s.classList.contains('et_slider_auto') && !reduce) timer = setInterval(function () { if (!d.hidden) show(i + 1); }, speed);
+      }
+      paint(); restart();
     });
-    // fullwidth gallery sliders: show one image at a time with arrows
-    $$('.et_pb_gallery_fullwidth').forEach(function (g) {
-      var items = $$('.et_pb_gallery_item', g);
-      if (items.length < 2) return;
-      var i = 0;
-      items.forEach(function (it, j) { it.style.display = j ? 'none' : 'block'; });
-      function show(k) { items[i].style.display = 'none'; i = (k + items.length) % items.length; items[i].style.display = 'block'; }
-      var pv = $('.et-pb-arrow-prev', g), nx = $('.et-pb-arrow-next', g);
-      if (pv) on(pv, 'click', function (e) { e.preventDefault(); show(i - 1); });
-      if (nx) on(nx, 'click', function (e) { e.preventDefault(); show(i + 1); });
-    });
+  }
+
+  /* ---------- Divi "multi view": different image/text per device ---------- */
+  function multiView() {
+    var els = $$('[data-et-multi-view]');
+    if (!els.length) return;
+    var data = els.map(function (el) { try { return JSON.parse(el.getAttribute('data-et-multi-view')); } catch (e) { return null; } });
+    var cur = null;
+    function device() { var vw = w.innerWidth; return vw <= 767 ? 'phone' : vw <= 980 ? 'tablet' : 'desktop'; }
+    function pick(v, dev) { return v[dev] !== undefined ? v[dev] : dev === 'phone' && v.tablet !== undefined ? v.tablet : v.desktop; }
+    function apply() {
+      var dev = device();
+      if (dev === cur) return;
+      cur = dev;
+      els.forEach(function (el, k) {
+        var dd = data[k]; if (!dd || !dd.schema) return;
+        if (dd.schema.attrs) { var at = pick(dd.schema.attrs, dev) || {}; Object.keys(at).forEach(function (n) { el.setAttribute(n, at[n]); }); }
+        if (dd.schema.content) { var c = pick(dd.schema.content, dev); if (typeof c === 'string') el.innerHTML = c; }
+        if (dd.schema.classes) { var cl = pick(dd.schema.classes, dev) || {}; (cl.add || []).forEach(function (x) { el.classList.add(x); }); (cl.remove || []).forEach(function (x) { el.classList.remove(x); }); }
+        ['desktop', 'tablet', 'phone'].forEach(function (x) { el.removeAttribute('data-et-multi-view-load-' + x + '-hidden'); });
+      });
+    }
+    apply();
+    var rt; on(w, 'resize', function () { clearTimeout(rt); rt = setTimeout(apply, 150); });
   }
 
   /* ---------- before / after ---------- */
@@ -464,7 +495,7 @@
   }
 
   function init() {
-    [mobileMenus, popup, tabs, toggles, carousels, sliders, beforeAfter, lightbox, blogFilter, misc, translate, forms, delayed].forEach(function (f) {
+    [multiView, mobileMenus, popup, tabs, toggles, carousels, sliders, beforeAfter, lightbox, blogFilter, misc, translate, forms, delayed].forEach(function (f) {
       try { f(); } catch (e) { if (w.console) console.error('site.js', f.name, e); }
     });
   }
