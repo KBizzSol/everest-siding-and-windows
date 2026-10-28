@@ -58,3 +58,24 @@ The build now strips everything WordPress and serves plain static pages. `tools/
 **Checks (tools/perf/, run in a Vercel Sandbox with Chrome):** `lh.mjs` (Lighthouse mobile + screenshots), `domdiff.mjs` (every Divi section/module size and visibility vs. the original), `interact.mjs` (31 click-through tests: menu, popup, tabs, toggles, sliders, before/after, lightbox, filter, forms → thank-you, tracking delay, translate, sticky header).
 
 Lighthouse mobile, local test server (before → after): home 26 → 97, LP SmartSide 15 → 99, blog post 28 → 100, FAQ 100, contact 99, service area 100, Malarkey 99, portfolio 96. Layout shift 0 on all of them.
+
+## Phase 3 — SEO / AEO content and design (branch `seo`)
+**Content (`tools/content.py`)** — built on top of the copied pages at build time, so `mirror/` stays the untouched original.
+- Six new guide pages, each with a direct "short answer" up top (what AI answers quote), question-style headings, tables, an FAQ in `<details>` and FAQPage + BreadcrumbList + LocalBusiness schema:
+  - `/lp-smartside-siding-cost-houston/`: real prices from Everest's own published project pages (LP SmartSide siding-only jobs since 2024: count, median, range, full table). Recomputed on every build from the portfolio.
+  - `/affordable-siding-replacement-houston/`: best price without the cheap bid (fixed price, no change orders, no down payment, lowest bid guarantee, financing).
+  - `/lp-smartside-installation-faq/`: step-by-step install + 12 questions (HowTo schema).
+  - `/lp-smartside-siding-faq/`: 12 product questions.
+  - `/lp-smartside-vs-hardie-plank/` and `/lp-smartside-vs-vinyl-siding/`: comparison tables.
+- Tagline band ("Nobody in Texas installs more LP SmartSide than Everest, so nobody gives you a better price on it.") on the homepage under the hero and before the footer on the LP SmartSide, siding, quick quote, payment and promotions pages.
+- "Straight answers" link block to the guides on the home, FAQ, LP SmartSide, siding, Hardie, quick quote, cost vs. value, payment and services pages.
+- Repair and vinyl: Everest does not repair siding and does not install vinyl siding. Two sentences that implied repairs were reworded; seven vinyl articles get a notice under the title pointing to the LP vs. vinyl page. URLs unchanged.
+- `llms.txt` lists the guides first and states no repairs, no vinyl, no down payment, the tagline and where real prices are published.
+
+**Design (`tools/ev.css`)** — layered over Divi on every page.
+- Headlines in Archivo (condensed signage style, self-hosted variable font); body stays Poppins.
+- Buttons: "free quote" in action green #2E7D3E with a board-edge shadow (white text passes contrast; the old #52AC62 did not), "call" in white with an ink outline and phone icon, other links as quiet outline buttons. Same everywhere, keyboard focus ring.
+- Mobile bottom bar: call (ink) | free consultation (green), full width, safe-area aware.
+- Promise band: ink background with LP lap-siding shadow lines; two columns on desktop.
+
+**Sources used for competitor research:** Mr. Happy House cost guide and LP vs. Hardie article, All Over TX Roofing cost page, Texas Home Exteriors (LP BuildSmart Platinum), Allied Siding & Windows (Hardie contractor pages), LP warranty comparison (lpcorp.com), Fixr LP SmartSide buyer's guide.
