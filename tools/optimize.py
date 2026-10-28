@@ -209,10 +209,16 @@ HEADER_IMGS = [0]
 
 
 def header_img_count(s):
-    """Images above the fold that must not be lazy: header logos + the first content image."""
+    """Images above the fold that must not be lazy: header logos + images in the first content section."""
     end = s.find("</header>")
     n = len(re.findall(r"<img\b", s[:end])) if end > 0 else 0
-    return n + 1
+    first = re.search(r'<div class="et_pb_section et_pb_section_0[ "]', s[end:] if end > 0 else s)
+    if first:
+        start = (end if end > 0 else 0) + first.start()
+        nxt = re.search(r'<div class="et_pb_section et_pb_section_1[ "]', s[start:])
+        stop = start + nxt.start() if nxt else start + 20000
+        n += len(re.findall(r"<img\b", s[start:stop]))
+    return n
 
 
 HERO_DONE = {}
@@ -230,8 +236,7 @@ def hero_preload(parts):
     if not small:
         return '<link rel="preload" as="image" href="%s" fetchpriority="high">' % url
     PHONE_BG.append((url, small))
-    return ('<link rel="preload" as="image" href="%s" media="(max-width:767px)" fetchpriority="high">'
-            '<link rel="preload" as="image" href="%s" media="(min-width:768px)" fetchpriority="high">' % (small, url))
+    return '<link rel="preload" as="image" href="%s" media="(max-width:767px)" fetchpriority="high">' % small
 
 
 PHONE_BG = []
@@ -301,6 +306,8 @@ STATIC_CSS = (
     # blog filter plugin: no loader, items visible
     ".blog_loader{display:none!important}.bfg_theme_1{opacity:1!important}.filtr-container{display:flex;flex-wrap:wrap}"
     "html{scroll-padding-top:120px}"
+    "#et-main-area .et_builder_inner_content>.et_pb_section:not(:first-child):not(.et_pb_section_0){content-visibility:auto;contain-intrinsic-size:auto 900px}"
+    ".et-l--footer .et_builder_inner_content>.et_pb_section{content-visibility:visible}"
 )
 
 
@@ -364,6 +371,77 @@ def phone_backgrounds():
     return rules
 
 
+ICON_FONTS = {
+    # family -> (original file used by the site, subset name)
+    "ETmodules": ("wp-content/themes/Divi/core/admin/fonts/modules/all/modules.ttf", "assets/fonts/etmodules-ev.woff2"),
+    "FontAwesome-solid": ("wp-content/themes/Divi/core/admin/fonts/fontawesome/fa-solid-900.ttf", "assets/fonts/fa-solid-ev.woff2"),
+    "FontAwesome-regular": ("wp-content/themes/Divi/core/admin/fonts/fontawesome/fa-regular-400.ttf", "assets/fonts/fa-regular-ev.woff2"),
+    "FontAwesome-brands": ("wp-content/themes/Divi/core/admin/fonts/fontawesome/fa-brands-400.ttf", "assets/fonts/fa-brands-ev.woff2"),
+}
+ICON_DONE = {}
+
+
+def used_icon_codepoints():
+    """Every codepoint an icon could use: CSS content values, data-icon attributes, text of icon elements."""
+    cps = set()
+    for f in glob.glob(os.path.join(OUT, "**", "*.css"), recursive=True) + glob.glob(os.path.join(BUILD, "*.css")):
+        t = open(f, encoding="utf-8", errors="ignore").read()
+        for v in re.findall(r'content:\s*(?:"([^"]*)"|\'([^\']*)\')', t):
+            for ch in re.sub(r"\\([0-9a-fA-F]{1,6})\s?", lambda m: chr(int(m.group(1), 16)), v[0] or v[1]):
+                cps.add(ord(ch))
+    for f in glob.glob(os.path.join(OUT, "**", "*.html"), recursive=True):
+        t = open(f, encoding="utf-8", errors="ignore").read()
+        for v in re.findall(r'data-icon(?:-[a-z]+)?=["\']([^"\']*)["\']', t):
+            cps.update(ord(c) for c in H.unescape(v))
+        for v in re.findall(r'class="[^"]*\b(?:et-pb-icon|et_pb_font_icon|fa|fas|far|fab)\b[^"]*"[^>]*>([^<]{1,8})<', t):
+            cps.update(ord(c) for c in H.unescape(v))
+    cps.update(range(0x20, 0x7F))           # ASCII (Divi maps some icons to letters)
+    return cps
+
+
+def subset_icon_fonts():
+    try:
+        from fontTools import subset
+    except ImportError:
+        print("  icon font subsetting skipped (pip install fonttools brotli)")
+        return
+    cps = used_icon_codepoints()
+    for fam, (src, dst) in ICON_FONTS.items():
+        f = os.path.join(OUT, src)
+        if not os.path.isfile(f):
+            continue
+        out = os.path.join(OUT, dst)
+        os.makedirs(os.path.dirname(out), exist_ok=True)
+        opts = subset.Options(); opts.flavor = "woff2"; opts.layout_features = ["*"]; opts.notdef_outline = True
+        try:
+            font = subset.load_font(f, opts)
+            sub = subset.Subsetter(opts); sub.populate(unicodes=sorted(cps)); sub.subset(font)
+            subset.save_font(font, out, opts)
+            ICON_DONE[src.rsplit(".", 1)[0]] = "/" + dst
+            print("  icon font %s: %d KB -> %d KB" % (fam, os.path.getsize(f) // 1024, os.path.getsize(out) // 1024))
+        except Exception as e:
+            print("  icon font %s failed: %s" % (fam, e))
+
+
+def swap_icon_fonts_in_css():
+    """Point @font-face rules at the subset woff2 (kept first in src so browsers pick it)."""
+    if not ICON_DONE:
+        return
+    for f in glob.glob(os.path.join(BUILD, "*.css")):
+        t = open(f, encoding="utf-8").read()
+        def face(m):
+            body = m.group(0)
+            for stem, new in ICON_DONE.items():
+                if "/" + stem + "." in body or stem.split("/")[-1] + ".woff" in body:
+                    body = re.sub(r"src:[^;}]*;?", "", body)
+                    body = body.replace("{", "{src:url(%s) format('woff2');" % new, 1)
+                    break
+            return body
+        t2 = re.sub(r"@font-face\s*\{[^}]*\}", face, t)
+        if t2 != t:
+            open(f, "w", encoding="utf-8").write(t2)
+
+
 def main():
     print("optimize")
     compress_images()
@@ -383,6 +461,8 @@ def main():
                     for m in re.finditer(r"(div\.et_pb_section\.et_pb_section_0\{background-image:)([^}]*?)url\(" + re.escape(big) + r"\)([^}]*)\}", css):
                         fh.write("@media only screen and (max-width:767px){%s%surl(%s)%s}}" % (m.group(1), m.group(2), small, m.group(3)))
     os.makedirs(os.path.join(OUT, "assets", "fonts"), exist_ok=True)
+    subset_icon_fonts()
+    swap_icon_fonts_in_css()
     open(os.path.join(OUT, "assets", "site.js"), "w", encoding="utf-8").write(SITE_JS)
     for f in glob.glob(os.path.join(HERE, "vendor", "fonts", "*.woff2")):
         shutil.copy(f, os.path.join(OUT, "assets", "fonts", os.path.basename(f)))
