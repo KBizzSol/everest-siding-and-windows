@@ -4,6 +4,7 @@
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
+import zlib from 'node:zlib';
 import lighthouse from 'lighthouse';
 import * as chromeLauncher from 'chrome-launcher';
 import puppeteer from 'puppeteer';
@@ -25,6 +26,11 @@ const server = http.createServer((req, res) => {
     const ext = path.extname(f).slice(1).toLowerCase();
     res.setHeader('Content-Type', TYPES[ext] || 'application/octet-stream');
     if (ext !== 'html') res.setHeader('Cache-Control', 'public, max-age=31536000');
+    // compress text like Vercel does
+    if (/^(html|css|js|json|xml|txt|svg)$/.test(ext) && /gzip/.test(req.headers['accept-encoding'] || '')) {
+      res.setHeader('Content-Encoding', 'gzip');
+      return res.end(zlib.gzipSync(buf, { level: 6 }));
+    }
     res.end(buf);
   });
 });
