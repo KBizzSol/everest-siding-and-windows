@@ -12,6 +12,12 @@ FACTS = """# Everest Siding and Windows
 > Family-owned exterior remodeling contractor in the Greater Houston area since 2015: LP SmartSide and James Hardie siding installation and replacement, window replacement, roofing (GAF and Malarkey), covered patios and outdoor living, plus add-on services. Showroom in Tomball, TX. Bills itself as the largest LP SmartSide home remodeler in Texas.
 
 ## Key facts
+- Tagline: Nobody in Texas installs more LP SmartSide than Everest, so nobody gives you a better price on it.
+- Real project prices: LP SmartSide siding replacements are published with prices; see https://everestsidingandwindows.com/lp-smartside-siding-cost-houston/
+- No down payment: payment only on satisfactory completion
+- Handles HOA approval and permits; project manager inspects daily
+- Low-E house wrap added on every siding job
+- LP BuildSmart Master level (2025)
 - Address: 11424 Spring Cypress Rd Unit A1, Tomball, TX 77377
 - Phone: (832) 334-2528
 - Email: info@everestsidingandwindows.com
@@ -28,6 +34,7 @@ FACTS = """# Everest Siding and Windows
 
 ## What Everest does not do
 - No siding repairs (installation and full replacement only)
+- No vinyl siding (does not sell, install or repair it; replaces vinyl with LP SmartSide)
 - No sale of materials (not a distributor or supplier)
 - Window replacement minimum: 3 windows
 
@@ -42,18 +49,24 @@ FACTS = """# Everest Siding and Windows
 Houston, Conroe, Cypress, Hockley, Humble, Huntsville, Jersey Village, Katy, Kingwood, Magnolia, Montgomery, Pinehurst, Richmond, Spring, Sugar Land, The Woodlands, Tomball and Willis, TX
 """
 
-GROUP_ORDER = ["Home", "Services", "Pricing and payment", "Company", "Service areas", "Project gallery", "Articles and guides", "Other"]
+GROUP_ORDER = ["Home", "Guides and FAQs", "Services", "Pricing and payment", "Company", "Service areas", "Project gallery", "Articles and guides", "Other"]
 OTHER_SLUGS = {"privacy-policy"}
 
 SERVICE_SLUGS = {"services", "add-ons-services"}
 PRICING_SLUGS = {"quick-quote", "cost-vs-value", "payment-options", "promotions"}
-COMPANY_SLUGS = {"about", "credentials", "giving-back", "contact", "faqs", "service-areas", "portfolio", "blog"}
+COMPANY_SLUGS = {"about", "credentials", "giving-back", "contact", "service-areas", "portfolio", "blog"}
+
+
+GUIDE_SLUGS = {"lp-smartside-siding-cost-houston", "affordable-siding-replacement-houston", "lp-smartside-installation-faq",
+               "lp-smartside-siding-faq", "lp-smartside-vs-hardie-plank", "lp-smartside-vs-vinyl-siding", "faqs"}
 
 
 def group(p, is_post):
     slug = p.strip("/")
     if p == "/":
         return "Home"
+    if slug in GUIDE_SLUGS:
+        return "Guides and FAQs"
     article = re.match(r"(how|what|why|is|are|can|does|should|winterizing)-", slug)
     if slug in SERVICE_SLUGS or (slug.endswith("-in-houston-tx") and not article and "project" not in slug):
         return "Services"
