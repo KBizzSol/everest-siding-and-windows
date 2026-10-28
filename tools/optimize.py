@@ -18,6 +18,7 @@ OUT = os.path.join(REPO, "site")
 BUILD = os.path.join(OUT, "_ev")              # temporary per-page CSS for purge.mjs (removed by it)
 
 SITE_JS = open(os.path.join(HERE, "site.js"), encoding="utf-8").read()
+EV_CSS = open(os.path.join(HERE, "ev.css"), encoding="utf-8").read()
 JS_VER = hashlib.md5(SITE_JS.encode()).hexdigest()[:10]
 
 # inline scripts that are tracking tags: kept, but run on first interaction
@@ -211,8 +212,19 @@ def optimize_page(fp):
         return clean + "".join(parts) + "</div>"
     s = re.sub(r'(<div\b[^>]*data-et-multi-view="[^"]*"[^>]*>)((.*?))</div>(?=\s*</div>)', mv_content, s, flags=re.S)
 
+    # form fields without a visible label: name them for screen readers (placeholder text, or the select's question)
+    def label_field(m):
+        tag = m.group(0)
+        if "aria-label=" in tag or 'type="hidden"' in tag or 'type="submit"' in tag or 'type="checkbox"' in tag:
+            return tag
+        ph = re.search(r'placeholder="([^"]+)"', tag)
+        name = re.search(r'name="([^"]+)"', tag)
+        lab = ph.group(1).rstrip(" *") if ph else {"hear": "How did you hear about us?", "howcanwehelp": "How can we help?"}.get(name.group(1) if name else "", "")
+        return tag.replace("<" + m.group(1), '<%s aria-label="%s"' % (m.group(1), H.escape(lab, quote=True)), 1) if lab else tag
+    s = re.sub(r"<(input|select|textarea)\b[^>]*>", label_field, s)
+
     # ---- 3. carousel layout before JS (no layout shift): slides per view from data-breakpoints
-    extra = [fonts_css(), STATIC_CSS]
+    extra = [fonts_css(), STATIC_CSS, EV_CSS]
     n = [0]
 
     def carousel(m):
@@ -232,7 +244,7 @@ def optimize_page(fp):
     s = re.sub(r'<div ([^>]*class="swiper-container[^"]*"[^>]*)>', carousel, s)
 
     # ---- 4. images
-    hero = hero_preload(parts)
+    hero = hero_preload(parts) if 'class="et_pb_section et_pb_section_0' in s else ""
     count = [0]
 
     def img(m):
@@ -254,6 +266,7 @@ def optimize_page(fp):
     os.makedirs(BUILD, exist_ok=True)
     open(os.path.join(BUILD, css_id + ".css"), "w", encoding="utf-8").write("\n".join(parts) + "\n" + "".join(extra))
     head_bits = ""
+    head_bits += '<link rel="preload" href="/assets/fonts/archivo-latin-wdth-normal.woff2" as="font" type="font/woff2" crossorigin>'
     for wgt in ("400", "500", "600", "700"):   # weights used above the fold: no text reflow when they arrive
         head_bits += '<link rel="preload" href="/assets/fonts/poppins-latin-%s-normal.woff2" as="font" type="font/woff2" crossorigin>' % wgt
     if ICON_DONE.get("wp-content/themes/Divi/core/admin/fonts/modules/all/modules"):

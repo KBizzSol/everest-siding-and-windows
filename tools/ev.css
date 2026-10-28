@@ -1,0 +1,142 @@
+/* Everest design layer (loaded after Divi's CSS on every page).
+   Idea: job-site signage type (Archivo, condensed) + "board edge" buttons + LP lap-siding shadow lines.
+   Palette: ink #003847 · mist #E7F8F8 · brand green #52AC62 · action green #2E7D3E · edge #1F5A2C · paper #FFFFFF */
+@font-face{font-family:'Archivo';font-style:normal;font-display:swap;font-weight:100 900;font-stretch:62% 125%;src:url(/assets/fonts/archivo-latin-wdth-normal.woff2) format('woff2')}
+@font-face{font-family:'Archivo Fallback';src:local('Arial Narrow'),local('Arial');size-adjust:94%;ascent-override:96%;descent-override:24%;line-gap-override:0%}
+:root{--ev-ink:#003847;--ev-mist:#E7F8F8;--ev-brand:#52AC62;--ev-go:#2E7D3E;--ev-edge:#1F5A2C;--ev-paper:#fff;
+  --ev-display:'Archivo','Archivo Fallback',Impact,sans-serif;--ev-r:10px}
+
+/* ---------- headlines: condensed signage type ---------- */
+#page-container h1,#page-container h2,#page-container h3,#page-container h4,#page-container .et_pb_slide_title,#page-container .ev-faq summary{
+  font-family:var(--ev-display)!important;font-stretch:84%;letter-spacing:-.005em;font-optical-sizing:auto}
+#page-container h1,#page-container h2,#page-container .et_pb_slide_title{font-weight:800!important;line-height:1.04!important}
+#page-container h3,#page-container h4{font-weight:700!important;line-height:1.12!important}
+#page-container p{text-wrap:pretty}
+#page-container h1,#page-container h2,#page-container h3{text-wrap:balance}
+
+/* ---------- buttons ---------- */
+#page-container .et_pb_button.kbs_btn,#page-container a.kbs-apt-btn.et_pb_button,.ev-btn{
+  font-family:var(--ev-display)!important;font-stretch:90%;font-weight:700!important;font-size:17px!important;letter-spacing:.01em!important;
+  text-transform:none!important;line-height:1.1!important;padding:15px 22px 14px!important;border:0!important;border-radius:var(--ev-r)!important;
+  background:var(--ev-go)!important;background-image:none!important;color:#fff!important;
+  box-shadow:0 3px 0 var(--ev-edge),0 10px 22px -12px rgba(0,56,71,.55)!important;
+  text-decoration:none!important;
+  transition:transform .15s ease,box-shadow .15s ease,background-color .15s ease!important}
+#page-container .et_pb_button.kbs_btn:after,#page-container .et_pb_button.kbs_btn:before{display:none!important}
+#page-container .et_pb_button.kbs_btn:hover,.ev-btn:hover{transform:translateY(-1px);background:#286E36!important;box-shadow:0 4px 0 var(--ev-edge),0 14px 26px -12px rgba(0,56,71,.6)!important;padding:15px 22px 14px!important}
+#page-container .et_pb_button.kbs_btn:active,.ev-btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ev-edge)!important}
+#page-container .et_pb_button.kbs_btn:focus-visible,.ev-btn:focus-visible{outline:3px solid #F2C14E;outline-offset:3px}
+/* call buttons: paper with ink, phone glyph */
+#page-container .et_pb_button.kbs_btn.kbs_phone,.ev-btn--call{background:var(--ev-paper)!important;color:var(--ev-ink)!important;
+  box-shadow:inset 0 0 0 2px var(--ev-ink),0 3px 0 var(--ev-ink)!important}
+#page-container .et_pb_button.kbs_btn.kbs_phone:hover,.ev-btn--call:hover{background:var(--ev-mist)!important;box-shadow:inset 0 0 0 2px var(--ev-ink),0 4px 0 var(--ev-ink)!important}
+#page-container .et_pb_button.kbs_btn.kbs_phone:before,.ev-btn--call:before{content:''!important;display:inline-block!important;position:static!important;opacity:1!important;margin:0!important;
+  width:18px;height:18px;vertical-align:-3px;margin-right:9px!important;background:currentColor;
+  -webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z'/%3E%3C/svg%3E") center/contain no-repeat;
+          mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 0 1 3 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1z'/%3E%3C/svg%3E") center/contain no-repeat}
+/* plain link buttons (view all, learn more): quiet */
+#page-container .et_pb_button.kbs_btn:not(.kbs_phone):not(.kbs-apt-btn){background:transparent!important;color:var(--ev-ink)!important;box-shadow:inset 0 0 0 2px var(--ev-ink)!important}
+#page-container .et_pb_button.kbs_btn:not(.kbs_phone):not(.kbs-apt-btn):hover{background:var(--ev-ink)!important;color:#fff!important}
+#page-container .et_pb_bg_layout_dark .et_pb_button.kbs_btn:not(.kbs_phone):not(.kbs-apt-btn){color:#fff!important;box-shadow:inset 0 0 0 2px #fff!important}
+/* the form submit */
+#page-container .wpcf7-submit{font-family:var(--ev-display)!important;font-stretch:90%;font-weight:800!important;letter-spacing:.02em!important;
+  border-radius:var(--ev-r)!important;background:var(--ev-go)!important;box-shadow:0 3px 0 var(--ev-edge)!important;border:0!important}
+#page-container .wpcf7-submit:hover{background:#286E36!important}
+#page-container .wpcf7 input:focus,#page-container .wpcf7 textarea:focus,#page-container .wpcf7 select:focus{outline:3px solid rgba(82,172,98,.45);outline-offset:1px}
+
+/* ---------- mobile call / quote bar (footer row .kbs-mobile-btns) ---------- */
+#page-container .kbs-mobile-btns .et_pb_button.kbs_btn{width:100%;min-height:58px;border-radius:0!important;box-shadow:none!important;transform:none!important;
+  font-size:16px!important;padding:12px 10px!important;text-align:center;white-space:normal;line-height:1.15!important}
+#page-container .kbs-mobile-btns .et_pb_button.kbs_btn.kbs_phone{background:var(--ev-ink)!important;color:#fff!important}
+#page-container .kbs-mobile-btns .et_pb_button.kbs_btn.kbs-apt-btn{background:var(--ev-go)!important;color:#fff!important}
+#page-container .kbs-mobile-btns .et_pb_button.kbs_btn:hover{padding:12px 10px!important}
+#page-container .kbs-mobile-btns .et_pb_column{padding-bottom:env(safe-area-inset-bottom)}
+#page-container .kbs-mobile-btns .et_pb_button_module_wrapper{margin:0!important}
+
+/* ---------- the promise band (tagline) ---------- */
+.ev-promise{position:relative;background:var(--ev-ink);color:#fff;overflow:hidden;
+  /* LP lap-siding shadow lines */
+  background-image:repeating-linear-gradient(180deg,rgba(255,255,255,0) 0 46px,rgba(0,0,0,.22) 46px 48px,rgba(255,255,255,.05) 48px 49px)}
+.ev-promise__in{max-width:1080px;margin:0 auto;padding:64px 22px 60px}
+.ev-promise__line{font-family:var(--ev-display);font-stretch:78%;font-weight:850;font-size:clamp(34px,6.4vw,74px);line-height:.98;letter-spacing:-.01em;margin:0 0 22px;max-width:15ch;color:#fff;text-wrap:balance}
+.ev-promise__line b{color:var(--ev-brand);font-weight:inherit}
+.ev-promise__sub{font-size:clamp(17px,1.6vw,20px);line-height:1.55;max-width:58ch;margin:0 0 28px;color:#D7EEF0}
+.ev-promise__sub strong{color:#fff}
+.ev-promise__cta{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
+#page-container .ev-promise p{padding-bottom:0}
+@media(min-width:900px){
+  .ev-promise__in{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);column-gap:56px;align-items:end;padding:84px 32px 80px}
+  .ev-promise__line{grid-row:1/span 3;max-width:16ch;margin:0}
+  .ev-promise__sub{margin-bottom:24px}
+  .ev-promise__fine{grid-column:2}
+}
+.ev-promise .ev-btn--call{box-shadow:0 3px 0 #001E26!important}
+.ev-promise__fine{margin:20px 0 0;font-size:14px;color:#C4E2E6}
+.ev-promise__fine a{color:#fff;text-underline-offset:3px}
+
+/* ---------- guide pages (new SEO/AEO pages) ---------- */
+.ev-page{background:#fff;color:#22323A;font-size:17px;line-height:1.7}
+.ev-hero{background:var(--ev-mist);border-bottom:1px solid #CFE9EA}
+.ev-hero__in,.ev-body__in{max-width:860px;margin:0 auto;padding:0 22px}
+.ev-hero__in{padding-top:40px;padding-bottom:36px}
+.ev-crumbs{font-size:14px;margin:0 0 14px;color:#2F4C55}
+.ev-crumbs a{color:var(--ev-ink)}
+.ev-page h1{font-size:clamp(34px,5.6vw,56px)!important;color:var(--ev-ink);margin:0 0 14px;padding:0}
+.ev-lede{font-size:clamp(18px,2vw,21px);color:#28434C;max-width:62ch;margin:0}
+.ev-meta{font-size:14px;color:#3B5961;margin:14px 0 0}
+.ev-answer{margin:28px 0 0;background:#fff;border-left:6px solid var(--ev-brand);border-radius:0 var(--ev-r) var(--ev-r) 0;padding:18px 20px;box-shadow:0 1px 0 #CFE9EA}
+.ev-answer p{margin:0}
+.ev-answer strong{color:var(--ev-ink)}
+.ev-body__in{padding-top:36px;padding-bottom:56px}
+.ev-page h2{font-size:clamp(27px,3.6vw,38px)!important;color:var(--ev-ink);margin:44px 0 12px;padding:0}
+.ev-page h3{font-size:clamp(20px,2.4vw,24px)!important;color:var(--ev-ink);margin:28px 0 8px;padding:0}
+.ev-page p,.ev-page li{max-width:70ch}
+.ev-page p{margin:0 0 16px}
+.ev-page ul,.ev-page ol{margin:0 0 18px 1.2em;padding:0}
+.ev-page li{margin:0 0 8px}
+#page-container .ev-page a{color:#1E6B33;text-decoration:underline;text-underline-offset:3px}
+#page-container .ev-page .ev-related a{text-decoration:none}
+#page-container .ev-page ol.ev-steps{counter-reset:s;list-style:none!important;margin:8px 0 22px!important;padding:0!important}
+#page-container .ev-page ol.ev-steps>li{list-style:none!important}
+.ev-steps li{counter-increment:s;position:relative;padding:0 0 18px 56px;margin:0!important;border-left:2px solid #CFE9EA;margin-left:18px!important}
+.ev-steps li:last-child{border-color:transparent}
+.ev-steps li:before{content:counter(s);position:absolute;left:-19px;top:-2px;width:36px;height:36px;border-radius:50%;background:var(--ev-ink);color:#fff;
+  font-family:var(--ev-display);font-weight:800;font-size:18px;display:grid;place-items:center}
+.ev-steps strong{display:block;color:var(--ev-ink);font-size:18px}
+.ev-table-wrap{overflow-x:auto;margin:10px 0 24px;border:1px solid #D6E7E9;border-radius:var(--ev-r)}
+.ev-table{border-collapse:collapse;width:100%;font-size:15px;line-height:1.45;min-width:560px}
+.ev-table th,.ev-table td{text-align:left;padding:11px 12px;border-bottom:1px solid #E3EEF0;vertical-align:top}
+.ev-table thead th{background:var(--ev-ink);color:#fff;font-weight:600}
+.ev-table td.ev-num,.ev-table th.ev-num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.ev-table tbody tr:nth-child(even){background:#F6FBFB}
+.ev-table th:nth-child(3),.ev-table td:nth-child(3){min-width:150px}
+@media(max-width:600px){.ev-table{min-width:0;font-size:14px}.ev-table th,.ev-table td{padding:9px 8px}}
+.ev-table caption{caption-side:bottom;text-align:left;font-size:13px;color:#3B5961;padding:8px 12px}
+.ev-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin:8px 0 26px;border:1px solid #D6E7E9;border-radius:var(--ev-r);overflow:hidden}
+.ev-stats div{padding:16px 14px;border-right:1px solid #D6E7E9;background:#fff}
+.ev-stats div:last-child{border-right:0}
+.ev-stats b{display:block;font-family:var(--ev-display);font-stretch:80%;font-weight:800;font-size:clamp(26px,4.4vw,38px);color:var(--ev-ink);line-height:1}
+.ev-stats span{font-size:14px;color:#4A666E;line-height:1.35;display:block;margin-top:6px}
+@media(max-width:560px){.ev-stats{grid-template-columns:1fr}.ev-stats div{border-right:0;border-bottom:1px solid #D6E7E9}.ev-stats div:last-child{border-bottom:0}}
+.ev-compare td:first-child{font-weight:600;color:var(--ev-ink);width:28%}
+.ev-faq{margin:12px 0 24px;border-top:1px solid #D6E7E9}
+.ev-faq details{border-bottom:1px solid #D6E7E9}
+.ev-faq summary{cursor:pointer;list-style:none;padding:18px 44px 18px 0;position:relative;font-family:var(--ev-display);font-stretch:88%;font-weight:700;font-size:20px;line-height:1.25;color:var(--ev-ink)}
+.ev-faq summary::-webkit-details-marker{display:none}
+.ev-faq summary:after{content:'';position:absolute;right:6px;top:50%;width:12px;height:12px;margin-top:-9px;border-right:3px solid var(--ev-go);border-bottom:3px solid var(--ev-go);transform:rotate(45deg);transition:transform .2s}
+.ev-faq details[open] summary:after{transform:rotate(-135deg);margin-top:-3px}
+.ev-faq summary:focus-visible{outline:3px solid #F2C14E;outline-offset:2px}
+.ev-faq .ev-a{padding:0 0 18px}
+.ev-note{background:#FFF8E6;border:1px solid #F1D99A;border-radius:var(--ev-r);padding:14px 18px;margin:0 0 22px;font-size:16px;line-height:1.55;color:#4A3B12}
+.ev-note strong{color:#3A2E0B}
+#page-container .ev-note a{color:#1E6B33;text-decoration:underline}
+.ev-related{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px;margin:12px 0 0;padding:0;list-style:none}
+.ev-related li{margin:0;max-width:none}
+.ev-related a{display:block;height:100%;padding:16px 18px;border:2px solid #D6E7E9;border-radius:var(--ev-r);text-decoration:none;color:var(--ev-ink);font-weight:600;line-height:1.35;background:#fff}
+.ev-related a:hover{border-color:var(--ev-brand)}
+.ev-related small{display:block;font-weight:400;color:#4A666E;margin-top:4px;font-size:14px}
+.ev-answers{background:var(--ev-mist);padding:44px 0}
+.ev-answers__in{max-width:1080px;margin:0 auto;padding:0 22px}
+.ev-answers h2{font-family:var(--ev-display);font-stretch:84%;font-weight:800;color:var(--ev-ink);font-size:clamp(26px,3.4vw,36px);margin:0 0 6px;padding:0}
+.ev-answers p{margin:0 0 6px;color:#34525B}
+@media (prefers-reduced-motion:reduce){#page-container .et_pb_button.kbs_btn,.ev-btn,.ev-faq summary:after{transition:none!important}}

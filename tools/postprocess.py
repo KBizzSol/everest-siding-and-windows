@@ -12,6 +12,7 @@ import os, re, sys, shutil, html, glob, datetime
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import llms  # noqa: E402
+import content  # noqa: E402
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
@@ -156,6 +157,7 @@ def process_html(fp, page_path):
     s = rewrite_js_absolute(s)
     s = restore_ld(s, keep)
     s = audit_fixes(s, page_path)
+    s = content.page_fixes(s, page_path)
     open(fp, "w", encoding="utf-8").write(s)
 
 
@@ -281,6 +283,7 @@ def main():
     for fp in glob.glob(os.path.join(OUT, "**", "*.css"), recursive=True):
         process_css(fp)
     print("  html files:", n)
+    print("guides"); content.build_pages(OUT, SRC, os.path.join(OUT, "faqs", "index.html"))
     print("prune"); prune_unreferenced()
     print("seo files"); write_seo_files()
     if os.environ.get("EV_NO_OPTIMIZE") != "1":
