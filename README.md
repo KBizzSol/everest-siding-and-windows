@@ -33,9 +33,28 @@ See **AUDIT.md** for the malware/spam/link audit and what was fixed.
 - WordPress system URLs (`/wp-admin/`, `/wp-login.php`, `/xmlrpc.php`, `/wp-json/`, feeds) redirect in `vercel.json`.
 
 ## Confirm before pointing the domain here
-- **Consultation form:** the WordPress form handler doesn't exist on static hosting. Connect a form service (e.g. Formspree) or a Vercel function before the DNS switch so leads keep arriving.
+- **Consultation form:** now posts to `/api/lead` (see Phase 2). Click the FormSubmit activation email the first time a lead arrives.
 - **EN/ES switcher:** check the Spanish pages work on the Vercel preview.
 - Then add `everestsidingandwindows.com` in Vercel → Project → Domains and update DNS. Do this only after `mirror/` is final, because the live WordPress site is the mirror's source.
 
-## Phase 2 (next)
-Speed, image compression, accessibility, SEO/AEO and design improvements, as on Bay Colony.
+
+## Phase 2 — mobile performance (static, no WordPress code)
+The build now strips everything WordPress and serves plain static pages. `tools/postprocess.py` runs `tools/optimize.py` and `tools/purge.mjs` after the copy step (needs `npm i --prefix tools` and `pip install pillow fonttools brotli`; GitHub Actions does this).
+
+**Removed from every page:** jQuery, jQuery Migrate, Divi's scripts (scripts.min.js, sticky, magnific popup, salvattore, fitvids...), Divi Essential (swiper, sliders, before/after), Contact Form 7 + reCAPTCHA, CF7 Conditional Fields, PixelYourSite (no pixel configured), Link Whisper, WordPress polyfills/hooks/i18n, the dead Universal Analytics tag, Google Fonts, the date picker, WordPress REST/oEmbed/feed head links.
+
+**Replaced by `/assets/site.js` (~10 KB):** mobile menu, consultation popup, service tabs, FAQ toggles/accordions, review + logo carousels, Divi sliders and gallery sliders, before/after sliders, gallery lightbox, portfolio filter + search, sticky header, scroll-to-top, clickable blurbs, phone mask, EN/ES (Google Translate loads only when tapped), YouTube previews (player loads on tap), forms.
+
+**Forms:** every Contact Form 7 form posts to `/api/lead` (Vercel function, FormSubmit → info@everestsidingandwindows.com), then fires the same `wpcf7mailsent` event and redirects to the same thank-you pages, so tracking keeps working. Spam: hidden trap field + too-fast check (flagged, not dropped). FormSubmit sends a one-time activation email to the inbox on the first lead.
+
+**Tracking:** both GTM containers, GA4, Microsoft Clarity and the Meta pixel are unchanged, but start on the visitor's first scroll/tap/keypress.
+
+**CSS:** each page's CSS (inline + files) is gathered, purged to the rules that page uses, minified and inlined (no render-blocking requests). Sections below the fold use `content-visibility:auto`.
+
+**Fonts:** Poppins (7 weights) and Noto Sans self-hosted as woff2 with `font-display:swap`; above-the-fold weights preloaded; metric-matched fallback; Divi and Font Awesome icon fonts subset to the icons used (89/199/33/133 KB → 15/29/9/27 KB).
+
+**Photos:** same files, same names and pixel sizes (capped at 1920px wide), recompressed: 168 MB → 56 MB. Below-the-fold images lazy-load; the hero gets a 768px phone copy (`*-ev768.webp`), preloaded.
+
+**Checks (tools/perf/, run in a Vercel Sandbox with Chrome):** `lh.mjs` (Lighthouse mobile + screenshots), `domdiff.mjs` (every Divi section/module size and visibility vs. the original), `interact.mjs` (31 click-through tests: menu, popup, tabs, toggles, sliders, before/after, lightbox, filter, forms → thank-you, tracking delay, translate, sticky header).
+
+Lighthouse mobile, local test server (before → after): home 26 → 97, LP SmartSide 15 → 99, blog post 28 → 100, FAQ 100, contact 99, service area 100, Malarkey 99, portfolio 96. Layout shift 0 on all of them.

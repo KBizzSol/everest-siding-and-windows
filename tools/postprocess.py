@@ -283,6 +283,14 @@ def main():
     print("  html files:", n)
     print("prune"); prune_unreferenced()
     print("seo files"); write_seo_files()
+    if os.environ.get("EV_NO_OPTIMIZE") != "1":
+        import optimize, subprocess
+        optimize.main()
+        node_mods = os.path.join(HERE, "node_modules", "purgecss")
+        if os.path.isdir(node_mods):
+            subprocess.run(["node", os.path.join(HERE, "purge.mjs"), OUT], check=True)
+        else:
+            raise SystemExit("purgecss missing: run `npm ci --prefix tools` (or set EV_NO_OPTIMIZE=1 for an unoptimized build)")
 
 
 if __name__ == "__main__":
