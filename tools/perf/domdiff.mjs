@@ -20,9 +20,9 @@ const browser = await puppeteer.launch({ executablePath: process.env.CHROME_PATH
 async function snap(port) {
   const p = await browser.newPage();
   await p.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
-  await p.goto(`http://localhost:${port}${page}`, { waitUntil: 'networkidle0', timeout: 60000 });
+  await p.goto(`http://localhost:${port}${page}`, { waitUntil: 'load', timeout: 60000 });
   await p.evaluate(async () => { for (let y = 0; y < document.body.scrollHeight; y += 600) { scrollTo(0, y); await new Promise(r => setTimeout(r, 40)); } scrollTo(0, 0); });
-  await new Promise(r => setTimeout(r, 700));
+  await new Promise(r => setTimeout(r, 2500));
   const out = await p.evaluate(() => {
     const res = {};
     document.querySelectorAll('[class*="et_pb_section_"],[class*="et_pb_row_"],[class*="et_pb_module"],[class*="et_pb_column_"]').forEach(el => {
